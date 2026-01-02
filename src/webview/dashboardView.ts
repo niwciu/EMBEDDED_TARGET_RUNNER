@@ -6,6 +6,7 @@ export type WebviewMessage =
   | { type: 'runTargetForModule'; moduleId: string }
   | { type: 'runTargetForAllModules'; target: string }
   | { type: 'reveal'; moduleId: string; target: string }
+  | { type: 'revealConfigure'; moduleId: string }
   | { type: 'configureModule'; moduleId: string }
   | { type: 'reconfigureModule'; moduleId: string }
   | { type: 'configureAllModules' }
@@ -86,11 +87,16 @@ export class DashboardViewProvider implements vscode.Disposable {
     .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
     .run { opacity: 1; font-size: 14px; cursor: pointer; }
     .status { font-weight: 600; cursor: pointer; font-size: 14px; }
+    .configure-status { font-weight: 600; cursor: pointer; font-size: 14px; }
     .status.idle { color: var(--vscode-descriptionForeground); }
     .status.running { color: var(--vscode-terminal-ansiYellow); }
     .status.success { color: var(--vscode-terminal-ansiGreen); }
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
+    .configure-status.idle { color: var(--vscode-descriptionForeground); }
+    .configure-status.running { color: var(--vscode-terminal-ansiYellow); }
+    .configure-status.success { color: var(--vscode-terminal-ansiGreen); }
+    .configure-status.failed { color: var(--vscode-terminal-ansiRed); }
     .module-actions { display: inline-flex; gap: 6px; }
     .module-actions button { font-size: 14px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
     .module-actions button:hover { background: var(--vscode-list-hoverBackground); }
@@ -139,10 +145,21 @@ export class DashboardViewProvider implements vscode.Disposable {
         const configureLabel = moduleState.needsConfigure ? 'Configure module (create out/)' : 'Reconfigure module (delete out/ then configure)';
         const configureAction = moduleState.needsConfigure ? 'configure' : 'reconfigure';
         const configureIcon = moduleState.needsConfigure ? '🛠️' : '♻️';
+        const configureStatus = moduleState.configure?.status || 'idle';
+        const configureStatusIcon = configureStatus === 'running' ? '⏳' : configureStatus === 'success' ? '✓' : configureStatus === 'failed' ? '✗' : '•';
         const runDisabled = moduleState.needsConfigure ? 'disabled' : '';
         const moduleActions = [
           '<span class=\"module-actions\">',
           '<button title=\"' + configureLabel + '\" data-configure=\"true\" data-action=\"' + configureAction + '\" data-module=\"' + moduleState.module.id + '\">' + configureIcon + '</button>',
+          '<span class=\"configure-status ' +
+            configureStatus +
+            '\" title=\"Configure status: ' +
+            configureStatus +
+            '. Click to view output.\" data-configure-status=\"true\" data-module=\"' +
+            moduleState.module.id +
+            '\">' +
+            configureStatusIcon +
+            '</span>',
           '<button title=\"Run all targets\" data-run-module=\"true\" data-module=\"' + moduleState.module.id + '\" ' + runDisabled + '>▶</button>',
           '</span>',
         ].join('');
@@ -230,6 +247,14 @@ export class DashboardViewProvider implements vscode.Disposable {
         status.addEventListener('click', (event) => {
           const cell = event.target.closest('td');
           vscode.postMessage({ type: 'reveal', moduleId: cell.dataset.module, target: cell.dataset.target });
+        });
+      });
+
+      table.querySelectorAll('[data-configure-status="true"]').forEach((status) => {
+        status.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const moduleId = event.target.dataset.module;
+          vscode.postMessage({ type: 'revealConfigure', moduleId });
         });
       });
     }

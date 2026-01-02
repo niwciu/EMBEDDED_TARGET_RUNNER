@@ -38,11 +38,13 @@ export class DashboardController implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private readonly watchers: vscode.FileSystemWatcher[] = [];
   private readonly options: DashboardControllerOptions;
+  private readonly configureOutput: vscode.OutputChannel;
 
   constructor(private readonly context: vscode.ExtensionContext, options: DashboardControllerOptions) {
     this.options = options;
     const settings = this.getSettings();
     this.runner = new TargetRunner(settings.maxParallel);
+    this.configureOutput = vscode.window.createOutputChannel(`${options.title} Configure`);
     this.viewProvider = new DashboardViewProvider(
       context.extensionUri,
       (message) => this.handleWebviewMessage(message),
@@ -54,6 +56,7 @@ export class DashboardController implements vscode.Disposable {
     this.disposables.push(
       this.viewProvider,
       this.runner,
+      this.configureOutput,
       this.runner.onDidUpdate((update) => {
         if (update.status === 'running') {
           this.stateStore.updateRun(update.moduleId, update.target, { status: 'running', startedAt: Date.now() });
@@ -146,7 +149,7 @@ export class DashboardController implements vscode.Disposable {
     }
     this.pushState();
     for (const moduleState of modules) {
-      await this.configureAndDetect(moduleState.module, selectedSettings, false);
+      await this.configureAndDetect(moduleState.module, selectedSettings, false, true);
       this.pushState();
     }
   }
@@ -194,7 +197,7 @@ export class DashboardController implements vscode.Disposable {
     if (!selectedSettings) {
       return;
     }
-    await this.configureAndDetect(moduleState.module, selectedSettings, false);
+    await this.configureAndDetect(moduleState.module, selectedSettings, false, true);
     this.pushState();
   }
 
@@ -213,15 +216,25 @@ export class DashboardController implements vscode.Disposable {
     try {
       if (!(await hasCMakeCache(moduleInfo.path))) {
         this.stateStore.setNeedsConfigure(moduleInfo.id, true);
+        this.stateStore.updateConfigure(moduleInfo.id, {
+          status: 'idle',
+          output: 'Configure required (missing CMake cache).',
+          updatedAt: Date.now(),
+        });
         for (const target of this.stateStore.getState().targets) {
           this.stateStore.setAvailability(moduleInfo.id, target.name, false);
         }
         return;
       }
 
-      await this.configureAndDetect(moduleInfo, settings, true);
+      await this.configureAndDetect(moduleInfo, settings, true, false);
     } catch (error) {
       this.stateStore.setNeedsConfigure(moduleInfo.id, true);
+      this.stateStore.updateConfigure(moduleInfo.id, {
+        status: 'failed',
+        output: this.formatConfigureError(error),
+        updatedAt: Date.now(),
+      });
       for (const target of this.stateStore.getState().targets) {
         this.stateStore.setAvailability(moduleInfo.id, target.name, false);
       }
@@ -274,6 +287,9 @@ export class DashboardController implements vscode.Disposable {
       case 'reconfigureModule':
         void this.reconfigureModule(message.moduleId);
         break;
+      case 'revealConfigure':
+        this.revealConfigureOutput(message.moduleId);
+        break;
       case 'configureAllModules':
         void this.configureAllModules();
         break;
@@ -289,15 +305,47 @@ export class DashboardController implements vscode.Disposable {
     moduleInfo: ModuleInfo,
     settings: RunnerSettings,
     skipConfigure: boolean,
+    updateStatus: boolean,
   ): Promise<void> {
-    const configureResult = skipConfigure
-      ? { configured: false, generator: await selectGenerator(settings.buildSystem, path.join(moduleInfo.path, 'out')) }
-      : await ensureConfigured(moduleInfo.path, settings.buildSystem);
-    this.stateStore.setModuleGenerator(moduleInfo.id, configureResult.generator);
-    this.stateStore.setNeedsConfigure(moduleInfo.id, false);
-    const targets = await detectTargets(moduleInfo.path, configureResult.generator);
-    for (const target of this.stateStore.getState().targets) {
-      this.stateStore.setAvailability(moduleInfo.id, target.name, targets.has(target.name));
+    if (updateStatus) {
+      this.stateStore.updateConfigure(moduleInfo.id, { status: 'running', updatedAt: Date.now() });
+      this.pushState();
+    }
+
+    try {
+      const configureResult = skipConfigure
+        ? {
+            configured: false,
+            generator: await selectGenerator(settings.buildSystem, path.join(moduleInfo.path, 'out')),
+            output: 'Skipped configure (existing CMake cache).',
+          }
+        : await ensureConfigured(moduleInfo.path, settings.buildSystem);
+      this.stateStore.setModuleGenerator(moduleInfo.id, configureResult.generator);
+      this.stateStore.setNeedsConfigure(moduleInfo.id, false);
+      if (updateStatus) {
+        this.stateStore.updateConfigure(moduleInfo.id, {
+          status: 'success',
+          output: configureResult.output,
+          updatedAt: Date.now(),
+        });
+      }
+      const targets = await detectTargets(moduleInfo.path, configureResult.generator);
+      for (const target of this.stateStore.getState().targets) {
+        this.stateStore.setAvailability(moduleInfo.id, target.name, targets.has(target.name));
+      }
+    } catch (error) {
+      if (updateStatus) {
+        this.stateStore.updateConfigure(moduleInfo.id, {
+          status: 'failed',
+          output: this.formatConfigureError(error),
+          updatedAt: Date.now(),
+        });
+      }
+      this.stateStore.setNeedsConfigure(moduleInfo.id, true);
+      for (const target of this.stateStore.getState().targets) {
+        this.stateStore.setAvailability(moduleInfo.id, target.name, false);
+      }
+      throw error;
     }
   }
 
@@ -363,6 +411,32 @@ export class DashboardController implements vscode.Disposable {
       return;
     }
     this.enqueueRun(moduleState.module, target, this.getSettings());
+  }
+
+  private revealConfigureOutput(moduleId: string): void {
+    const moduleState = this.stateStore.getState().modules.find((state) => state.module.id === moduleId);
+    if (!moduleState) {
+      return;
+    }
+    const output = moduleState.configure?.output ?? 'No configure output available yet.';
+    this.configureOutput.clear();
+    this.configureOutput.appendLine(`${moduleState.module.name} - Configure Output`);
+    this.configureOutput.appendLine('');
+    this.configureOutput.appendLine(output);
+    this.configureOutput.show(true);
+  }
+
+  private formatConfigureError(error: unknown): string {
+    if (error && typeof error === 'object' && 'stdout' in error && 'stderr' in error) {
+      const stdout = typeof error.stdout === 'string' ? error.stdout : '';
+      const stderr = typeof error.stderr === 'string' ? error.stderr : '';
+      const message = 'message' in error && typeof error.message === 'string' ? error.message : 'Configure failed.';
+      return [message, stdout, stderr].filter(Boolean).join('\n');
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return 'Configure failed.';
   }
 
   private mergeTargets(targetLists: Array<{ name: string }[]>): Array<{ name: string }> {
