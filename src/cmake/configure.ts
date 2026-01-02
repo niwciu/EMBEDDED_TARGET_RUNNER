@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { runCommand } from '../utils/exec';
-import { BuildSystem, selectGenerator } from './generator';
+import { BuildSystem, CMakeGenerator, selectGenerator } from './generator';
 
 export interface ConfigureResult {
   configured: boolean;
-  generator: string;
+  generator: CMakeGenerator;
 }
 
 export async function ensureConfigured(modulePath: string, buildSystem: BuildSystem): Promise<ConfigureResult> {

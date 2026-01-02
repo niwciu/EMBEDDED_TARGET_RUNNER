@@ -1,4 +1,5 @@
 import * as fs from 'fs/promises';
+import { Dirent } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
@@ -17,7 +18,7 @@ async function isModuleDirectory(dirPath: string): Promise<boolean> {
 
 export async function discoverModules(workspaceFolder: vscode.WorkspaceFolder, modulesRoot: string): Promise<ModuleInfo[]> {
   const rootPath = path.join(workspaceFolder.uri.fsPath, modulesRoot);
-  let entries: fs.Dirent[] = [];
+  let entries: Dirent[] = [];
   try {
     entries = await fs.readdir(rootPath, { withFileTypes: true });
   } catch {

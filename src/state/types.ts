@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { CMakeGenerator } from '../cmake/generator';
 
 export type TargetRunStatus = 'idle' | 'running' | 'success' | 'failed';
 
@@ -28,7 +29,7 @@ export interface ModuleState {
   module: ModuleInfo;
   availability: TargetAvailability;
   runs: Record<string, RunResult>;
-  generator?: string;
+  generator?: CMakeGenerator;
 }
 
 export interface DashboardState {

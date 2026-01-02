@@ -93,46 +93,48 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const headerTargets = state.targets.map((target) => `<th data-target="${target.name}" class="target-header">${target.name}</th>`).join('');
+      const headerTargets = state.targets.map((target) =>
+        '<th data-target=\"' + target.name + '\" class=\"target-header\">' + target.name + '</th>',
+      ).join('');
       const rows = state.modules.map((moduleState) => {
         const cells = state.targets.map((target) => {
           const available = moduleState.availability[target.name];
           const run = moduleState.runs[target.name] || { status: 'idle' };
           if (!available) {
-            return `<td><div class="cell"><span class="status missing">-</span></div></td>`;
+            return '<td><div class=\"cell\"><span class=\"status missing\">-</span></div></td>';
           }
           const statusClass = run.status;
           const icon = run.status === 'running' ? '⏳' : run.status === 'success' ? '✓' : run.status === 'failed' ? '✗' : '•';
-          return `
-            <td data-module="${moduleState.module.id}" data-target="${target.name}">
-              <div class="cell">
-                <span class="status ${statusClass}" data-reveal="true">${icon}</span>
-                <span class="run" data-run="true">▶</span>
-              </div>
-            </td>
-          `;
+          return [
+            '<td data-module=\"' + moduleState.module.id + '\" data-target=\"' + target.name + '\">',
+            '<div class=\"cell\">',
+            '<span class=\"status ' + statusClass + '\" data-reveal=\"true\">' + icon + '</span>',
+            '<span class=\"run\" data-run=\"true\">▶</span>',
+            '</div>',
+            '</td>',
+          ].join('');
         }).join('');
-        return `
-          <tr>
-            <td class="module" data-module="${moduleState.module.id}">${moduleState.module.name}</td>
-            ${cells}
-          </tr>
-        `;
+        return [
+          '<tr>',
+          '<td class=\"module\" data-module=\"' + moduleState.module.id + '\">' + moduleState.module.name + '</td>',
+          cells,
+          '</tr>',
+        ].join('');
       }).join('');
 
-      table.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Module</th>
-              ${headerTargets}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
+      table.innerHTML = [
+        '<table>',
+        '<thead>',
+        '<tr>',
+        '<th>Module</th>',
+        headerTargets,
+        '</tr>',
+        '</thead>',
+        '<tbody>',
+        rows,
+        '</tbody>',
+        '</table>',
+      ].join('');
 
       table.querySelectorAll('td.module').forEach((cell) => {
         cell.addEventListener('click', () => {

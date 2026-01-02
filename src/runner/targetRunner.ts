@@ -19,7 +19,7 @@ export interface RunRequest {
 export class TargetRunner implements vscode.Disposable {
   private readonly pending: RunRequest[] = [];
   private readonly running = new Map<string, vscode.TaskExecution>();
-  private readonly lastTerminal = new Map<string, vscode.Terminal>();
+  private readonly taskNames = new Map<string, string>();
   private readonly updates = new vscode.EventEmitter<RunUpdate>();
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -44,21 +44,19 @@ export class TargetRunner implements vscode.Disposable {
     if (this.running.has(key) || this.pending.some((item) => this.getKey(item.module.id, item.target) === key)) {
       return;
     }
+    this.taskNames.set(key, this.getTaskName(request.module.name, request.target));
     this.pending.push(request);
     this.kick();
   }
 
   reveal(moduleId: string, target: string): void {
     const key = this.getKey(moduleId, target);
-    const running = this.running.get(key);
-    if (running?.terminal) {
-      running.terminal.show(true);
+    const taskName = this.taskNames.get(key);
+    if (!taskName) {
       return;
     }
-    const terminal = this.lastTerminal.get(key);
-    if (terminal) {
-      terminal.show(true);
-    }
+    const terminal = vscode.window.terminals.find((item) => item.name === taskName);
+    terminal?.show(true);
   }
 
   stopAll(): void {
@@ -91,9 +89,6 @@ export class TargetRunner implements vscode.Disposable {
 
     const execution = await vscode.tasks.executeTask(task);
     this.running.set(key, execution);
-    if (execution.terminal) {
-      this.lastTerminal.set(key, execution.terminal);
-    }
   }
 
   private handleTaskEnd(event: vscode.TaskProcessEndEvent): void {
@@ -110,5 +105,9 @@ export class TargetRunner implements vscode.Disposable {
 
   private getKey(moduleId: string, target: string): string {
     return `${moduleId}:${target}`;
+  }
+
+  private getTaskName(moduleName: string, target: string): string {
+    return `${moduleName}:${target}`;
   }
 }

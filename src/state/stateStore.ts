@@ -1,3 +1,4 @@
+import { CMakeGenerator } from '../cmake/generator';
 import { DashboardState, ModuleInfo, ModuleState, RunResult, TargetDefinition } from './types';
 
 export class StateStore {
@@ -26,7 +27,7 @@ export class StateStore {
     }
   }
 
-  setModuleGenerator(moduleId: string, generator: string): void {
+  setModuleGenerator(moduleId: string, generator: CMakeGenerator): void {
     const moduleState = this.modules.find((state) => state.module.id === moduleId);
     if (moduleState) {
       moduleState.generator = generator;
