@@ -1,0 +1,112 @@
+{
+  "name": "embedded-target-runner",
+  "displayName": "Embedded Target Runner",
+  "description": "Dashboard to discover and run CMake custom targets across test modules.",
+  "version": "0.1.0",
+  "publisher": "embedded",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:targetsRunner.dashboard",
+    "onCommand:targetsRunner.refresh",
+    "onCommand:targetsRunner.runAll",
+    "onCommand:targetsRunner.rerunFailed",
+    "onCommand:targetsRunner.stopAll",
+    "onCommand:targetsRunner.runTargetForModule",
+    "onCommand:targetsRunner.runTargetForAllModules"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "targetsRunner.dashboard",
+          "name": "Targets Dashboard"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "targetsRunner.refresh",
+        "title": "Targets Dashboard: Refresh"
+      },
+      {
+        "command": "targetsRunner.runAll",
+        "title": "Targets Dashboard: Run All"
+      },
+      {
+        "command": "targetsRunner.rerunFailed",
+        "title": "Targets Dashboard: Rerun Failed"
+      },
+      {
+        "command": "targetsRunner.stopAll",
+        "title": "Targets Dashboard: Stop All"
+      },
+      {
+        "command": "targetsRunner.runTargetForModule",
+        "title": "Targets Dashboard: Run Target for Module"
+      },
+      {
+        "command": "targetsRunner.runTargetForAllModules",
+        "title": "Targets Dashboard: Run Target for All Modules"
+      }
+    ],
+    "configuration": {
+      "title": "Targets Runner",
+      "properties": {
+        "targetsRunner.modulesRoot": {
+          "type": "string",
+          "default": "test",
+          "description": "Root folder for test modules."
+        },
+        "targetsRunner.targetsFile": {
+          "type": "string",
+          "default": ".vscode/targets.test.json",
+          "description": "Path to targets JSON file relative to the workspace root."
+        },
+        "targetsRunner.buildSystem": {
+          "type": "string",
+          "enum": ["auto", "ninja", "make"],
+          "default": "auto",
+          "description": "Build system to use when configuring modules."
+        },
+        "targetsRunner.makeJobs": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": ["auto"]
+            },
+            {
+              "type": "number",
+              "minimum": 1
+            }
+          ],
+          "default": "auto",
+          "description": "Number of jobs to pass to make."
+        },
+        "targetsRunner.maxParallel": {
+          "type": "number",
+          "default": 4,
+          "minimum": 1,
+          "description": "Maximum number of targets to run in parallel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.6",
+    "@types/vscode": "^1.85.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  }
+}
