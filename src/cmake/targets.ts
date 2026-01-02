@@ -7,7 +7,8 @@ export async function detectTargets(modulePath: string, generator: CMakeGenerato
   const targets = new Set<string>();
   if (generator === 'Ninja') {
     const result = await runCommand('ninja', ['-C', 'out', '-t', 'targets'], modulePath);
-    for (const line of result.stdout.split(/\r?\n/)) {
+    const output = `${result.stdout}\n${result.stderr}`;
+    for (const line of output.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed) {
         continue;
@@ -21,7 +22,8 @@ export async function detectTargets(modulePath: string, generator: CMakeGenerato
   }
 
   const result = await runCommand('cmake', ['--build', 'out', '--target', 'help'], modulePath);
-  for (const line of result.stdout.split(/\r?\n/)) {
+  const output = `${result.stdout}\n${result.stderr}`;
+  for (const line of output.split(/\r?\n/)) {
     const match = line.match(/^\.\.\.\s+([A-Za-z0-9_.:+-]+)\s/);
     if (match) {
       targets.add(match[1]);
