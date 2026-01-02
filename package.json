@@ -26,17 +26,8 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "embeddedProjectManager",
-          "title": "Embedded",
-          "icon": "resources/targets.svg"
-        }
-      ]
-    },
     "views": {
-      "embeddedProjectManager": [
+      "secondarySideBar": [
         {
           "id": "targetsRunner.dashboard",
           "name": "Targets Dashboard",
