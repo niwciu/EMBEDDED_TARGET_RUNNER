@@ -160,6 +160,7 @@ export class DashboardController implements vscode.Disposable {
 
       await this.configureAndDetect(moduleInfo, settings, true);
     } catch (error) {
+      this.stateStore.setNeedsConfigure(moduleInfo.id, true);
       for (const target of this.stateStore.getState().targets) {
         this.stateStore.setAvailability(moduleInfo.id, target.name, false);
       }

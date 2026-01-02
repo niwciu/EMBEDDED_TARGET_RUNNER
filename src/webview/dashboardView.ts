@@ -60,8 +60,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     th { position: sticky; top: 0; background: var(--vscode-editor-background); }
     td.module { text-align: left; cursor: pointer; }
     .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .run { opacity: 0; font-size: 12px; }
-    td:hover .run { opacity: 1; cursor: pointer; }
+    .run { opacity: 1; font-size: 12px; cursor: pointer; }
     .status { font-weight: 600; cursor: pointer; }
     .status.idle { color: var(--vscode-descriptionForeground); }
     .status.running { color: var(--vscode-terminal-ansiYellow); }
@@ -102,7 +101,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const rows = state.modules.map((moduleState) => {
         const moduleActions = moduleState.needsConfigure
           ? '<span class=\"module-actions\"><button data-configure=\"true\" data-module=\"' + moduleState.module.id + '\">Configure</button></span>'
-          : '';
+          : '<span class=\"module-actions\"><button data-run-module=\"true\" data-module=\"' + moduleState.module.id + '\">Run all</button></span>';
         const cells = state.targets.map((target) => {
           const available = moduleState.availability[target.name];
           const run = moduleState.runs[target.name] || { status: 'idle' };
@@ -152,6 +151,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         button.addEventListener('click', (event) => {
           event.stopPropagation();
           vscode.postMessage({ type: 'configureModule', moduleId: button.dataset.module });
+        });
+      });
+
+      table.querySelectorAll('button[data-run-module=\"true\"]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          vscode.postMessage({ type: 'runTargetForModule', moduleId: button.dataset.module });
         });
       });
 
