@@ -22,17 +22,32 @@ interface RunnerSettings {
   excludedModules: string[];
 }
 
+interface DashboardControllerOptions {
+  modulesRootKey: string;
+  moduleLabel: string;
+  actionsLabel: string;
+  title: string;
+}
+
 export class DashboardController implements vscode.Disposable {
   private readonly stateStore = new StateStore();
   private readonly runner: TargetRunner;
   private readonly viewProvider: DashboardViewProvider;
   private readonly disposables: vscode.Disposable[] = [];
   private readonly watchers: vscode.FileSystemWatcher[] = [];
+  private readonly options: DashboardControllerOptions;
 
-  constructor(private readonly context: vscode.ExtensionContext) {
+  constructor(private readonly context: vscode.ExtensionContext, options: DashboardControllerOptions) {
+    this.options = options;
     const settings = this.getSettings();
     this.runner = new TargetRunner(settings.maxParallel);
-    this.viewProvider = new DashboardViewProvider(context.extensionUri, (message) => this.handleWebviewMessage(message));
+    this.viewProvider = new DashboardViewProvider(
+      context.extensionUri,
+      (message) => this.handleWebviewMessage(message),
+      options.title,
+      options.moduleLabel,
+      options.actionsLabel,
+    );
 
     this.disposables.push(
       this.viewProvider,
@@ -391,7 +406,7 @@ export class DashboardController implements vscode.Disposable {
   private getSettings(): RunnerSettings {
     const config = vscode.workspace.getConfiguration('targetsRunner');
     return {
-      modulesRoot: config.get<string>('modulesRoot', 'test'),
+      modulesRoot: config.get<string>(this.options.modulesRootKey, config.get<string>('modulesRoot', 'test')),
       targetsFile: config.get<string>('targetsFile', '.vscode/targets.test.json'),
       buildSystem: config.get<BuildSystem>('buildSystem', 'auto'),
       makeJobs: config.get<string | number>('makeJobs', 'auto'),

@@ -82,11 +82,15 @@ const MENU_STRUCTURE: MenuItemDefinition[] = [
   },
   {
     label: 'HW Configurations',
-    command: {
-      title: 'HW Configurations',
-      command: 'targetsRunner.menuAction',
-      arguments: ['hwConfigurations'],
-    },
+    children: [
+      {
+        label: 'Targets Dashboard',
+        command: {
+          title: 'Targets Dashboard',
+          command: 'targetsRunner.openHwDashboard',
+        },
+      },
+    ],
   },
   {
     label: 'Project Manager Options',

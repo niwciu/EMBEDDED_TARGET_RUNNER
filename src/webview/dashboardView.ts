@@ -21,6 +21,9 @@ export class DashboardViewProvider implements vscode.Disposable {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly onMessage: (message: WebviewMessage) => void,
+    private readonly title: string,
+    private readonly moduleLabel: string,
+    private readonly actionsLabel: string,
   ) {}
 
   dispose(): void {
@@ -36,7 +39,7 @@ export class DashboardViewProvider implements vscode.Disposable {
 
     this.panel = vscode.window.createWebviewPanel(
       'targetsRunner.dashboard',
-      'Targets Dashboard',
+      this.title,
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -173,8 +176,8 @@ export class DashboardViewProvider implements vscode.Disposable {
         '<table>',
         '<thead>',
         '<tr>',
-        '<th>Module Name</th>',
-        '<th>Module Actions</th>',
+        '<th>${this.moduleLabel}</th>',
+        '<th>${this.actionsLabel}</th>',
         headerTargets,
         '</tr>',
         '</thead>',
