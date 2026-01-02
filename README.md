@@ -1,4 +1,4 @@
-# Embedded Target Runner
+# Embedded Project Manager
 
 A VS Code extension that discovers CMake test modules under `test/`, shows a dashboard of custom targets, and runs them through native VS Code tasks/terminals.
 

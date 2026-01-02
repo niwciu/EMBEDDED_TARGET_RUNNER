@@ -1,7 +1,7 @@
 {
   "name": "embedded-target-runner",
-  "displayName": "Embedded Target Runner",
-  "description": "Dashboard to discover and run CMake custom targets across test modules.",
+  "displayName": "Embedded Project Manager",
+  "description": "Dashboard to discover and run CMake custom targets across embedded test modules.",
   "version": "0.1.0",
   "publisher": "embedded",
   "repository": {
@@ -26,8 +26,17 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "embeddedProjectManager",
+          "title": "Embedded",
+          "icon": "resources/targets.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "embeddedProjectManager": [
         {
           "id": "targetsRunner.dashboard",
           "name": "Targets Dashboard",
