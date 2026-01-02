@@ -28,8 +28,17 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "targetsRunner",
+          "title": "Embedded Project Manager",
+          "icon": "resources/targets.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "targetsRunner": [
         {
           "id": "targetsRunner.menu",
           "name": "EMBEDDED PROJECT MANAGER: TARGETS DASHBOARD"
