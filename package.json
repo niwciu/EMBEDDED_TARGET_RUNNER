@@ -16,22 +16,32 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:targetsRunner.dashboard",
+    "onView:targetsRunner.menu",
     "onCommand:targetsRunner.refresh",
     "onCommand:targetsRunner.runAll",
     "onCommand:targetsRunner.rerunFailed",
     "onCommand:targetsRunner.stopAll",
     "onCommand:targetsRunner.runTargetForModule",
-    "onCommand:targetsRunner.runTargetForAllModules"
+    "onCommand:targetsRunner.runTargetForAllModules",
+    "onCommand:targetsRunner.openDashboard",
+    "onCommand:targetsRunner.menuAction"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "views": {
-      "secondarySideBar": [
+    "viewsContainers": {
+      "activitybar": [
         {
-          "id": "targetsRunner.dashboard",
-          "name": "Targets Dashboard",
-          "type": "webview"
+          "id": "targetsRunner",
+          "title": "Embedded Project Manager",
+          "icon": "resources/targets.svg"
+        }
+      ]
+    },
+    "views": {
+      "targetsRunner": [
+        {
+          "id": "targetsRunner.menu",
+          "name": "EMBEDDED PROJECT MANAGER: TARGETS DASHBOARD"
         }
       ]
     },
@@ -59,6 +69,14 @@
       {
         "command": "targetsRunner.runTargetForAllModules",
         "title": "Targets Dashboard: Run Target for All Modules"
+      },
+      {
+        "command": "targetsRunner.openDashboard",
+        "title": "Targets Dashboard: Open Dashboard"
+      },
+      {
+        "command": "targetsRunner.menuAction",
+        "title": "Targets Dashboard: Menu Action"
       }
     ],
     "configuration": {
