@@ -77,10 +77,10 @@ export function createConfigureTask(moduleInfo: ModuleInfo, generator: string): 
   );
 
   task.presentationOptions = {
-    reveal: vscode.TaskRevealKind.Always,
+    reveal: vscode.TaskRevealKind.Never,
     panel: vscode.TaskPanelKind.Dedicated,
     clear: false,
-    focus: true,
+    focus: false,
   };
 
   return task;
