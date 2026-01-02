@@ -14,8 +14,8 @@ export type WebviewMessage =
   | { type: 'rerunFailed' }
   | { type: 'stopAll' };
 
-export class DashboardViewProvider implements vscode.WebviewViewProvider {
-  private view?: vscode.WebviewView;
+export class DashboardViewProvider implements vscode.Disposable {
+  private panel?: vscode.WebviewPanel;
   private lastState?: DashboardState;
 
   constructor(
@@ -23,24 +23,42 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly onMessage: (message: WebviewMessage) => void,
   ) {}
 
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-    };
-    view.webview.html = this.getHtml(view.webview);
-    view.webview.onDidReceiveMessage((message) => this.onMessage(message));
+  dispose(): void {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
+  show(): void {
+    if (this.panel) {
+      this.panel.reveal();
+      return;
+    }
+
+    this.panel = vscode.window.createWebviewPanel(
+      'targetsRunner.dashboard',
+      'Targets Dashboard',
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      },
+    );
+    this.panel.webview.html = this.getHtml(this.panel.webview);
+    this.panel.webview.onDidReceiveMessage((message) => this.onMessage(message));
+    this.panel.onDidDispose(() => {
+      this.panel = undefined;
+    });
     if (this.lastState) {
-      void view.webview.postMessage({ type: 'state', payload: this.lastState });
+      void this.panel.webview.postMessage({ type: 'state', payload: this.lastState });
     }
   }
 
   setState(state: DashboardState): void {
     this.lastState = state;
-    if (!this.view) {
+    if (!this.panel) {
       return;
     }
-    this.view.webview.postMessage({ type: 'state', payload: state });
+    this.panel.webview.postMessage({ type: 'state', payload: state });
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -57,8 +75,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
     button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
     button:hover { background: var(--vscode-button-hoverBackground); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); }
+    table { width: auto; border-collapse: collapse; }
+    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); white-space: nowrap; }
     th { position: sticky; top: 0; background: var(--vscode-editor-background); }
     td.module { text-align: left; cursor: pointer; }
     td.actions { text-align: left; }
@@ -155,12 +173,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         '<table>',
         '<thead>',
         '<tr>',
-        '<th colspan=\"2\">Module</th>',
-        '<th colspan=\"' + state.targets.length + '\">CI targets</th>',
-        '</tr>',
-        '<tr>',
-        '<th>Name</th>',
-        '<th>Actions</th>',
+        '<th>Module Name</th>',
+        '<th>Module Actions</th>',
         headerTargets,
         '</tr>',
         '</thead>',
