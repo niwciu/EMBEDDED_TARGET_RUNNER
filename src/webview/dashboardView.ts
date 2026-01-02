@@ -75,8 +75,8 @@ export class DashboardViewProvider implements vscode.Disposable {
     .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
     button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
     button:hover { background: var(--vscode-button-hoverBackground); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); }
+    table { width: auto; border-collapse: collapse; }
+    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); white-space: nowrap; }
     th { position: sticky; top: 0; background: var(--vscode-editor-background); }
     td.module { text-align: left; cursor: pointer; }
     td.actions { text-align: left; }
@@ -173,12 +173,8 @@ export class DashboardViewProvider implements vscode.Disposable {
         '<table>',
         '<thead>',
         '<tr>',
-        '<th colspan=\"2\">Module</th>',
-        '<th colspan=\"' + state.targets.length + '\">CI targets</th>',
-        '</tr>',
-        '<tr>',
-        '<th>Name</th>',
-        '<th>Actions</th>',
+        '<th>Module Name</th>',
+        '<th>Module Actions</th>',
         headerTargets,
         '</tr>',
         '</thead>',
