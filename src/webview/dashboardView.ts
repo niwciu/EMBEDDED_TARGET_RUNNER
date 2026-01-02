@@ -14,33 +14,54 @@ export type WebviewMessage =
   | { type: 'rerunFailed' }
   | { type: 'stopAll' };
 
-export class DashboardViewProvider implements vscode.WebviewViewProvider {
-  private view?: vscode.WebviewView;
+export class DashboardViewProvider implements vscode.Disposable {
+  private panel?: vscode.WebviewPanel;
   private lastState?: DashboardState;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly onMessage: (message: WebviewMessage) => void,
+    private readonly title: string,
+    private readonly moduleLabel: string,
+    private readonly actionsLabel: string,
   ) {}
 
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-    };
-    view.webview.html = this.getHtml(view.webview);
-    view.webview.onDidReceiveMessage((message) => this.onMessage(message));
+  dispose(): void {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
+  show(): void {
+    if (this.panel) {
+      this.panel.reveal();
+      return;
+    }
+
+    this.panel = vscode.window.createWebviewPanel(
+      'targetsRunner.dashboard',
+      this.title,
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      },
+    );
+    this.panel.webview.html = this.getHtml(this.panel.webview);
+    this.panel.webview.onDidReceiveMessage((message) => this.onMessage(message));
+    this.panel.onDidDispose(() => {
+      this.panel = undefined;
+    });
     if (this.lastState) {
-      void view.webview.postMessage({ type: 'state', payload: this.lastState });
+      void this.panel.webview.postMessage({ type: 'state', payload: this.lastState });
     }
   }
 
   setState(state: DashboardState): void {
     this.lastState = state;
-    if (!this.view) {
+    if (!this.panel) {
       return;
     }
-    this.view.webview.postMessage({ type: 'state', payload: state });
+    this.panel.webview.postMessage({ type: 'state', payload: state });
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -53,29 +74,29 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Targets Dashboard</title>
   <style>
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; font-size: 14px; }
     .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
     button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
     button:hover { background: var(--vscode-button-hoverBackground); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); }
+    table { width: auto; border-collapse: collapse; }
+    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); white-space: nowrap; }
     th { position: sticky; top: 0; background: var(--vscode-editor-background); }
     td.module { text-align: left; cursor: pointer; }
     td.actions { text-align: left; }
     .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .run { opacity: 1; font-size: 12px; cursor: pointer; }
-    .status { font-weight: 600; cursor: pointer; }
+    .run { opacity: 1; font-size: 14px; cursor: pointer; }
+    .status { font-weight: 600; cursor: pointer; font-size: 14px; }
     .status.idle { color: var(--vscode-descriptionForeground); }
     .status.running { color: var(--vscode-terminal-ansiYellow); }
     .status.success { color: var(--vscode-terminal-ansiGreen); }
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
     .module-actions { display: inline-flex; gap: 6px; }
-    .module-actions button { font-size: 12px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
+    .module-actions button { font-size: 14px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
     .module-actions button:hover { background: var(--vscode-list-hoverBackground); }
     .module-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
     .target-header-content { display: inline-flex; align-items: center; gap: 6px; }
-    .target-header button { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .target-header button { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 14px; }
     .target-header button:hover { background: var(--vscode-list-hoverBackground); }
   </style>
 </head>
@@ -155,12 +176,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         '<table>',
         '<thead>',
         '<tr>',
-        '<th colspan=\"2\">Module</th>',
-        '<th colspan=\"' + state.targets.length + '\">CI targets</th>',
-        '</tr>',
-        '<tr>',
-        '<th>Name</th>',
-        '<th>Actions</th>',
+        '<th>${this.moduleLabel}</th>',
+        '<th>${this.actionsLabel}</th>',
         headerTargets,
         '</tr>',
         '</thead>',
