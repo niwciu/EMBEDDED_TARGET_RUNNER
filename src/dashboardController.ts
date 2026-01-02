@@ -57,6 +57,7 @@ export class DashboardController implements vscode.Disposable {
     this.disposables.push(
       this.viewProvider,
       this.runner,
+      this.configureOutput,
       this.runner.onDidUpdate((update) => {
         if (update.status === 'running') {
           this.stateStore.updateRun(update.moduleId, update.target, { status: 'running', startedAt: Date.now() });
