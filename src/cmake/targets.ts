@@ -8,35 +8,37 @@ export async function detectTargets(modulePath: string, generator: CMakeGenerato
   if (generator === 'Ninja') {
     const result = await runCommand('ninja', ['-C', 'out', '-t', 'targets'], modulePath);
     const output = `${result.stdout}\n${result.stderr}`;
-    for (const line of output.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        continue;
-      }
-      const targetName = trimmed.split(/[:\s]/)[0];
-      if (targetName) {
-        targets.add(targetName);
-      }
-    }
+    collectTargetsFromLines(output, targets);
     return targets;
   }
 
   const result = await runCommand('cmake', ['--build', 'out', '--target', 'help'], modulePath);
   const output = `${result.stdout}\n${result.stderr}`;
+  collectTargetsFromLines(output, targets);
+
+  if (targets.size === 0) {
+    const fallback = await runCommand('make', ['-C', outDir, 'help'], modulePath);
+    const fallbackOutput = `${fallback.stdout}\n${fallback.stderr}`;
+    collectTargetsFromLines(fallbackOutput, targets);
+  }
+
+  return targets;
+}
+
+function collectTargetsFromLines(output: string, targets: Set<string>): void {
   for (const line of output.split(/\r?\n/)) {
-    const match = line.match(/^\.\.\.\s+([A-Za-z0-9_.:+-]+)\s/);
+    const match = line.match(/^\s*\.\.\.\s+([A-Za-z0-9_.:+-]+)\b/);
     if (match) {
       targets.add(match[1]);
       continue;
     }
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('The following')) {
+    if (!trimmed || trimmed.toLowerCase().startsWith('the following')) {
       continue;
     }
     const token = trimmed.split(/\s+/)[0];
-    if (token) {
+    if (token && !token.includes(':')) {
       targets.add(token);
     }
   }
-  return targets;
 }
