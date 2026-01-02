@@ -31,7 +31,7 @@
         {
           "id": "embeddedProjectManager",
           "title": "Embedded Project Manager",
-          "icon": "resources/targets.svg"
+          "icon": "resources/embedded-project-manager.svg"
         }
       ]
     },
