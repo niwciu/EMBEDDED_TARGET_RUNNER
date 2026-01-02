@@ -8,6 +8,8 @@ export type WebviewMessage =
   | { type: 'reveal'; moduleId: string; target: string }
   | { type: 'configureModule'; moduleId: string }
   | { type: 'reconfigureModule'; moduleId: string }
+  | { type: 'configureAllModules' }
+  | { type: 'reconfigureAllModules' }
   | { type: 'refresh' }
   | { type: 'runAll' }
   | { type: 'rerunFailed' }
@@ -70,8 +72,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
     .module-actions { display: inline-flex; gap: 6px; }
-    .module-actions button { font-size: 12px; padding: 2px 6px; min-width: 24px; }
+    .module-actions button { font-size: 12px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
+    .module-actions button:hover { background: var(--vscode-list-hoverBackground); }
     .module-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .target-header-content { display: inline-flex; align-items: center; gap: 6px; }
+    .target-header button { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .target-header button:hover { background: var(--vscode-list-hoverBackground); }
   </style>
 </head>
 <body>
@@ -80,6 +86,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     <button data-action="runAll">Run All</button>
     <button data-action="rerunFailed">Rerun Failed</button>
     <button data-action="stopAll">Stop All</button>
+    <button data-action="configureAllModules">Configure All</button>
+    <button data-action="reconfigureAllModules">Reconfigure All</button>
   </div>
   <div id="table"></div>
   <script nonce="${nonce}">
@@ -99,7 +107,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
 
       const headerTargets = state.targets.map((target) =>
-        '<th data-target=\"' + target.name + '\" class=\"target-header\">' + target.name + '</th>',
+        [
+          '<th data-target=\"' + target.name + '\" class=\"target-header\">',
+          '<span class=\"target-header-content\">',
+          '<span>' + target.name + '</span>',
+          '<button title=\"Run target for all modules\" data-run-all-target=\"true\" data-target=\"' + target.name + '\">▶</button>',
+          '</span>',
+          '</th>',
+        ].join(''),
       ).join('');
       const rows = state.modules.map((moduleState) => {
         const configureLabel = moduleState.needsConfigure ? 'Configure module (create out/)' : 'Reconfigure module (delete out/ then configure)';
@@ -182,9 +197,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         });
       });
 
-      table.querySelectorAll('th.target-header').forEach((header) => {
-        header.addEventListener('click', () => {
-          vscode.postMessage({ type: 'runTargetForAllModules', target: header.dataset.target });
+      table.querySelectorAll('button[data-run-all-target=\"true\"]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          vscode.postMessage({ type: 'runTargetForAllModules', target: button.dataset.target });
         });
       });
 

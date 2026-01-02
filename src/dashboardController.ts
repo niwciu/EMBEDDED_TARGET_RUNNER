@@ -102,6 +102,20 @@ export class DashboardController implements vscode.Disposable {
     }
   }
 
+  async configureAllModules(): Promise<void> {
+    for (const moduleState of this.stateStore.getState().modules) {
+      if (moduleState.needsConfigure) {
+        await this.configureModule(moduleState.module.id);
+      }
+    }
+  }
+
+  async reconfigureAllModules(): Promise<void> {
+    for (const moduleState of this.stateStore.getState().modules) {
+      await this.reconfigureModule(moduleState.module.id);
+    }
+  }
+
   rerunFailed(): void {
     const settings = this.getSettings();
     for (const request of this.stateStore.getFailedTargets()) {
@@ -229,6 +243,12 @@ export class DashboardController implements vscode.Disposable {
         break;
       case 'reconfigureModule':
         void this.reconfigureModule(message.moduleId);
+        break;
+      case 'configureAllModules':
+        void this.configureAllModules();
+        break;
+      case 'reconfigureAllModules':
+        void this.reconfigureAllModules();
         break;
       case 'reveal':
         this.runner.reveal(message.moduleId, message.target);
