@@ -5,7 +5,7 @@ A VS Code extension that discovers CMake test modules under `test/`, shows a das
 ## Features
 
 - Zero-config module discovery (modules under `test/<module>`)
-- Targets list from `.vscode/targets.test.json` (fallback to defaults)
+- Targets list from `epm_targets_lists.json` (fallback to defaults)
 - Parallel execution with controlled concurrency
 - Native terminal output with clickable file:line:column links
 - Status dashboard (⏳ ✓ ✗ -)
@@ -21,23 +21,29 @@ A VS Code extension that discovers CMake test modules under `test/`, shows a das
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `targetsRunner.modulesRoot` | `test` | Root folder for test modules. |
-| `targetsRunner.targetsFile` | `.vscode/targets.test.json` | Targets list file. |
+| `targetsRunner.testModulesRoot` | `test` | Root folder for test modules. |
+| `targetsRunner.modulesRoot` | `test` | Deprecated. Use `targetsRunner.testModulesRoot` instead. |
+| `targetsRunner.hwConfigurationsRoot` | `hw` | Root folder for HW configurations. |
+| `targetsRunner.hwTestRoot` | `test/hw_test` | Root folder for HW tests. |
+| `targetsRunner.targetsFile` | `epm_targets_lists.json` | Targets list file. |
 | `targetsRunner.buildSystem` | `auto` | `auto`, `ninja`, or `make`. |
 | `targetsRunner.makeJobs` | `auto` | Number of make jobs (`auto` uses CPU count). |
 | `targetsRunner.maxParallel` | `4` | Maximum parallel target executions. |
 
 ## Targets file format
 
-`.vscode/targets.test.json`
+`epm_targets_lists.json`
 
 ```json
 {
-  "targets": [
+  "test": [
+    "run"
+  ],
+  "all_test_targets": [
     "format",
     "format_test",
+    "all",
     "run",
-    "run_ctest",
     "cppcheck",
     "ccm",
     "ccc",
@@ -45,8 +51,13 @@ A VS Code extension that discovers CMake test modules under `test/`, shows a das
     "ccr",
     "ccca",
     "ccra"
-  ]
+  ],
+  "hw": ["all", "flash", "reset", "erase"],
+  "hw_test": ["all", "flash", "reset", "erase"],
+  "ci": ["run", "cppcheck", "ccm", "ccc", "format_check"],
+  "reports": ["ccr", "ccmr"],
+  "format": ["format", "format_test"]
 }
 ```
 
-If the file is missing, the extension uses the default list above.
+If the file is missing, the extension uses the default lists above for each dashboard.

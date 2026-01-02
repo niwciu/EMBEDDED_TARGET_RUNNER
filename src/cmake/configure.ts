@@ -6,6 +6,7 @@ import { BuildSystem, CMakeGenerator, selectGenerator } from './generator';
 export interface ConfigureResult {
   configured: boolean;
   generator: CMakeGenerator;
+  output: string;
 }
 
 export async function hasCMakeCache(modulePath: string): Promise<boolean> {
@@ -30,10 +31,11 @@ export async function ensureConfigured(modulePath: string, buildSystem: BuildSys
 
   const generator = await selectGenerator(buildSystem, outDir);
   if (exists && (await hasCMakeCache(modulePath))) {
-    return { configured: false, generator };
+    return { configured: false, generator, output: 'Skipped configure (existing CMake cache).' };
   }
 
   await fs.mkdir(outDir, { recursive: true });
-  await runCommand('cmake', ['-S', './', '-B', 'out', '-G', generator], modulePath);
-  return { configured: true, generator };
+  const result = await runCommand('cmake', ['-S', './', '-B', 'out', '-G', generator], modulePath);
+  const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+  return { configured: true, generator, output };
 }

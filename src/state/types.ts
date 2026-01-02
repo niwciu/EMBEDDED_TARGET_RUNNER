@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CMakeGenerator } from '../cmake/generator';
 
 export type TargetRunStatus = 'idle' | 'running' | 'success' | 'failed';
+export type ConfigureStatus = 'idle' | 'running' | 'success' | 'failed';
 
 export interface ModuleInfo {
   id: string;
@@ -25,12 +26,19 @@ export interface RunResult {
   finishedAt?: number;
 }
 
+export interface ConfigureResult {
+  status: ConfigureStatus;
+  output?: string;
+  updatedAt?: number;
+}
+
 export interface ModuleState {
   module: ModuleInfo;
   availability: TargetAvailability;
   runs: Record<string, RunResult>;
   generator?: CMakeGenerator;
   needsConfigure?: boolean;
+  configure?: ConfigureResult;
 }
 
 export interface DashboardState {

@@ -16,22 +16,33 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:targetsRunner.dashboard",
+    "onView:targetsRunner.menu",
     "onCommand:targetsRunner.refresh",
     "onCommand:targetsRunner.runAll",
     "onCommand:targetsRunner.rerunFailed",
     "onCommand:targetsRunner.stopAll",
     "onCommand:targetsRunner.runTargetForModule",
-    "onCommand:targetsRunner.runTargetForAllModules"
+    "onCommand:targetsRunner.runTargetForAllModules",
+    "onCommand:targetsRunner.openDashboard",
+    "onCommand:targetsRunner.openHwDashboard",
+    "onCommand:targetsRunner.menuAction"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "views": {
-      "secondarySideBar": [
+    "viewsContainers": {
+      "activitybar": [
         {
-          "id": "targetsRunner.dashboard",
-          "name": "Targets Dashboard",
-          "type": "webview"
+          "id": "targetsRunner",
+          "title": "Embedded Project Manager",
+          "icon": "resources/targets.svg"
+        }
+      ]
+    },
+    "views": {
+      "targetsRunner": [
+        {
+          "id": "targetsRunner.menu",
+          "name": "EMBEDDED PROJECT MANAGER: TARGETS DASHBOARD"
         }
       ]
     },
@@ -59,19 +70,47 @@
       {
         "command": "targetsRunner.runTargetForAllModules",
         "title": "Targets Dashboard: Run Target for All Modules"
+      },
+      {
+        "command": "targetsRunner.openDashboard",
+        "title": "Targets Dashboard: Open Dashboard"
+      },
+      {
+        "command": "targetsRunner.openHwDashboard",
+        "title": "Targets Dashboard: Open HW Dashboard"
+      },
+      {
+        "command": "targetsRunner.menuAction",
+        "title": "Targets Dashboard: Menu Action"
       }
     ],
     "configuration": {
       "title": "Targets Runner",
       "properties": {
-        "targetsRunner.modulesRoot": {
+        "targetsRunner.testModulesRoot": {
           "type": "string",
           "default": "test",
           "description": "Root folder for test modules."
         },
+        "targetsRunner.modulesRoot": {
+          "type": "string",
+          "default": "test",
+          "description": "Deprecated. Use Targets Runner: Test Modules Root instead.",
+          "deprecationMessage": "Use Targets Runner: Test Modules Root instead."
+        },
+        "targetsRunner.hwConfigurationsRoot": {
+          "type": "string",
+          "default": "hw",
+          "description": "Root folder for HW configurations."
+        },
+        "targetsRunner.hwTestRoot": {
+          "type": "string",
+          "default": "test/hw_test",
+          "description": "Root folder for HW tests."
+        },
         "targetsRunner.targetsFile": {
           "type": "string",
-          "default": ".vscode/targets.test.json",
+          "default": "epm_targets_lists.json",
           "description": "Path to targets JSON file relative to the workspace root."
         },
         "targetsRunner.buildSystem": {

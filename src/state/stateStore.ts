@@ -1,5 +1,5 @@
 import { CMakeGenerator } from '../cmake/generator';
-import { DashboardState, ModuleInfo, ModuleState, RunResult, TargetDefinition } from './types';
+import { ConfigureResult, DashboardState, ModuleInfo, ModuleState, RunResult, TargetDefinition } from './types';
 
 export class StateStore {
   private modules: ModuleState[] = [];
@@ -20,6 +20,7 @@ export class StateStore {
       availability: {},
       runs: {},
       needsConfigure: false,
+      configure: { status: 'idle' },
     }));
     for (const moduleState of this.modules) {
       for (const target of this.targets) {
@@ -56,6 +57,17 @@ export class StateStore {
     }
     moduleState.runs[targetName] = {
       ...moduleState.runs[targetName],
+      ...update,
+    };
+  }
+
+  updateConfigure(moduleId: string, update: ConfigureResult): void {
+    const moduleState = this.modules.find((state) => state.module.id === moduleId);
+    if (!moduleState) {
+      return;
+    }
+    moduleState.configure = {
+      ...moduleState.configure,
       ...update,
     };
   }

@@ -8,6 +8,11 @@ export interface TargetTaskDefinition extends vscode.TaskDefinition {
   target: string;
 }
 
+export interface ConfigureTaskDefinition extends vscode.TaskDefinition {
+  type: 'targetsRunnerConfigure';
+  moduleId: string;
+}
+
 export function createTargetTask(
   moduleInfo: ModuleInfo,
   target: string,
@@ -47,6 +52,35 @@ export function createTargetTask(
     panel: vscode.TaskPanelKind.Dedicated,
     clear: false,
     focus: false,
+  };
+
+  return task;
+}
+
+export function createConfigureTask(moduleInfo: ModuleInfo, generator: string): vscode.Task {
+  const execution = new vscode.ShellExecution('cmake', ['-S', './', '-B', 'out', '-G', generator], {
+    cwd: moduleInfo.path,
+  });
+
+  const definition: ConfigureTaskDefinition = {
+    type: 'targetsRunnerConfigure',
+    moduleId: moduleInfo.id,
+  };
+
+  const task = new vscode.Task(
+    definition,
+    moduleInfo.workspaceFolder,
+    `${moduleInfo.name}:configure`,
+    'targetsRunner',
+    execution,
+    ['$gcc'],
+  );
+
+  task.presentationOptions = {
+    reveal: vscode.TaskRevealKind.Always,
+    panel: vscode.TaskPanelKind.Dedicated,
+    clear: false,
+    focus: true,
   };
 
   return task;
