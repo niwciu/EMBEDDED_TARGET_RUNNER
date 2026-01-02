@@ -35,9 +35,7 @@ export class DashboardController implements vscode.Disposable {
     this.viewProvider = new DashboardViewProvider(context.extensionUri, (message) => this.handleWebviewMessage(message));
 
     this.disposables.push(
-      vscode.window.registerWebviewViewProvider('targetsRunner.dashboard', this.viewProvider, {
-        webviewOptions: { retainContextWhenHidden: true },
-      }),
+      this.viewProvider,
       this.runner,
       this.runner.onDidUpdate((update) => {
         if (update.status === 'running') {
@@ -97,6 +95,11 @@ export class DashboardController implements vscode.Disposable {
       await this.refreshModule(moduleInfo, settings);
       this.pushState();
     }
+  }
+
+  showDashboard(): void {
+    this.viewProvider.show();
+    this.pushState();
   }
 
   runAll(): void {

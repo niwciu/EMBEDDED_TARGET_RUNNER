@@ -14,8 +14,8 @@ export type WebviewMessage =
   | { type: 'rerunFailed' }
   | { type: 'stopAll' };
 
-export class DashboardViewProvider implements vscode.WebviewViewProvider {
-  private view?: vscode.WebviewView;
+export class DashboardViewProvider implements vscode.Disposable {
+  private panel?: vscode.WebviewPanel;
   private lastState?: DashboardState;
 
   constructor(
@@ -23,24 +23,42 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly onMessage: (message: WebviewMessage) => void,
   ) {}
 
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-    };
-    view.webview.html = this.getHtml(view.webview);
-    view.webview.onDidReceiveMessage((message) => this.onMessage(message));
+  dispose(): void {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
+  show(): void {
+    if (this.panel) {
+      this.panel.reveal();
+      return;
+    }
+
+    this.panel = vscode.window.createWebviewPanel(
+      'targetsRunner.dashboard',
+      'Targets Dashboard',
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      },
+    );
+    this.panel.webview.html = this.getHtml(this.panel.webview);
+    this.panel.webview.onDidReceiveMessage((message) => this.onMessage(message));
+    this.panel.onDidDispose(() => {
+      this.panel = undefined;
+    });
     if (this.lastState) {
-      void view.webview.postMessage({ type: 'state', payload: this.lastState });
+      void this.panel.webview.postMessage({ type: 'state', payload: this.lastState });
     }
   }
 
   setState(state: DashboardState): void {
     this.lastState = state;
-    if (!this.view) {
+    if (!this.panel) {
       return;
     }
-    this.view.webview.postMessage({ type: 'state', payload: state });
+    this.panel.webview.postMessage({ type: 'state', payload: state });
   }
 
   private getHtml(webview: vscode.Webview): string {
