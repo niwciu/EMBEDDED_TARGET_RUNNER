@@ -71,7 +71,7 @@ export class DashboardViewProvider implements vscode.Disposable {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Targets Dashboard</title>
   <style>
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; font-size: 14px; }
     .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
     button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
     button:hover { background: var(--vscode-button-hoverBackground); }
@@ -81,19 +81,19 @@ export class DashboardViewProvider implements vscode.Disposable {
     td.module { text-align: left; cursor: pointer; }
     td.actions { text-align: left; }
     .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .run { opacity: 1; font-size: 12px; cursor: pointer; }
-    .status { font-weight: 600; cursor: pointer; }
+    .run { opacity: 1; font-size: 14px; cursor: pointer; }
+    .status { font-weight: 600; cursor: pointer; font-size: 14px; }
     .status.idle { color: var(--vscode-descriptionForeground); }
     .status.running { color: var(--vscode-terminal-ansiYellow); }
     .status.success { color: var(--vscode-terminal-ansiGreen); }
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
     .module-actions { display: inline-flex; gap: 6px; }
-    .module-actions button { font-size: 12px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
+    .module-actions button { font-size: 14px; padding: 2px 6px; min-width: 24px; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); }
     .module-actions button:hover { background: var(--vscode-list-hoverBackground); }
     .module-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
     .target-header-content { display: inline-flex; align-items: center; gap: 6px; }
-    .target-header button { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .target-header button { background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-editorGroup-border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 14px; }
     .target-header button:hover { background: var(--vscode-list-hoverBackground); }
   </style>
 </head>

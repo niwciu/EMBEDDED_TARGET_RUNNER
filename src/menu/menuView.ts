@@ -88,6 +88,14 @@ const MENU_STRUCTURE: MenuItemDefinition[] = [
       arguments: ['hwConfigurations'],
     },
   },
+  {
+    label: 'Project Manager Options',
+    command: {
+      title: 'Project Manager Options',
+      command: 'workbench.action.openSettings',
+      arguments: ['@ext:embedded.embedded-target-runner'],
+    },
+  },
 ];
 
 class MenuTreeItem extends vscode.TreeItem {
