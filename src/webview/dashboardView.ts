@@ -1,0 +1,175 @@
+import * as vscode from 'vscode';
+import { DashboardState } from '../state/types';
+
+export type WebviewMessage =
+  | { type: 'runTarget'; moduleId: string; target: string }
+  | { type: 'runTargetForModule'; moduleId: string }
+  | { type: 'runTargetForAllModules'; target: string }
+  | { type: 'reveal'; moduleId: string; target: string }
+  | { type: 'refresh' }
+  | { type: 'runAll' }
+  | { type: 'rerunFailed' }
+  | { type: 'stopAll' };
+
+export class DashboardViewProvider implements vscode.WebviewViewProvider {
+  private view?: vscode.WebviewView;
+  private lastState?: DashboardState;
+
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly onMessage: (message: WebviewMessage) => void,
+  ) {}
+
+  resolveWebviewView(view: vscode.WebviewView): void {
+    this.view = view;
+    view.webview.options = {
+      enableScripts: true,
+    };
+    view.webview.html = this.getHtml(view.webview);
+    view.webview.onDidReceiveMessage((message) => this.onMessage(message));
+    if (this.lastState) {
+      void view.webview.postMessage({ type: 'state', payload: this.lastState });
+    }
+  }
+
+  setState(state: DashboardState): void {
+    this.lastState = state;
+    if (!this.view) {
+      return;
+    }
+    this.view.webview.postMessage({ type: 'state', payload: state });
+  }
+
+  private getHtml(webview: vscode.Webview): string {
+    const nonce = String(Date.now());
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Targets Dashboard</title>
+  <style>
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
+    button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: var(--vscode-button-hoverBackground); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 4px; text-align: center; border-bottom: 1px solid var(--vscode-editorGroup-border); }
+    th { position: sticky; top: 0; background: var(--vscode-editor-background); }
+    td.module { text-align: left; cursor: pointer; }
+    .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .run { opacity: 0; font-size: 12px; }
+    td:hover .run { opacity: 1; cursor: pointer; }
+    .status { font-weight: 600; cursor: pointer; }
+    .status.idle { color: var(--vscode-descriptionForeground); }
+    .status.running { color: var(--vscode-terminal-ansiYellow); }
+    .status.success { color: var(--vscode-terminal-ansiGreen); }
+    .status.failed { color: var(--vscode-terminal-ansiRed); }
+    .status.missing { color: var(--vscode-disabledForeground); }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button data-action="refresh">Refresh</button>
+    <button data-action="runAll">Run All</button>
+    <button data-action="rerunFailed">Rerun Failed</button>
+    <button data-action="stopAll">Stop All</button>
+  </div>
+  <div id="table"></div>
+  <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
+    const table = document.getElementById('table');
+
+    document.querySelectorAll('button[data-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        vscode.postMessage({ type: button.dataset.action });
+      });
+    });
+
+    function render(state) {
+      if (!state || !state.modules) {
+        table.innerHTML = '<p>No modules found.</p>';
+        return;
+      }
+
+      const headerTargets = state.targets.map((target) =>
+        '<th data-target=\"' + target.name + '\" class=\"target-header\">' + target.name + '</th>',
+      ).join('');
+      const rows = state.modules.map((moduleState) => {
+        const cells = state.targets.map((target) => {
+          const available = moduleState.availability[target.name];
+          const run = moduleState.runs[target.name] || { status: 'idle' };
+          if (!available) {
+            return '<td><div class=\"cell\"><span class=\"status missing\">-</span></div></td>';
+          }
+          const statusClass = run.status;
+          const icon = run.status === 'running' ? '⏳' : run.status === 'success' ? '✓' : run.status === 'failed' ? '✗' : '•';
+          return [
+            '<td data-module=\"' + moduleState.module.id + '\" data-target=\"' + target.name + '\">',
+            '<div class=\"cell\">',
+            '<span class=\"status ' + statusClass + '\" data-reveal=\"true\">' + icon + '</span>',
+            '<span class=\"run\" data-run=\"true\">▶</span>',
+            '</div>',
+            '</td>',
+          ].join('');
+        }).join('');
+        return [
+          '<tr>',
+          '<td class=\"module\" data-module=\"' + moduleState.module.id + '\">' + moduleState.module.name + '</td>',
+          cells,
+          '</tr>',
+        ].join('');
+      }).join('');
+
+      table.innerHTML = [
+        '<table>',
+        '<thead>',
+        '<tr>',
+        '<th>Module</th>',
+        headerTargets,
+        '</tr>',
+        '</thead>',
+        '<tbody>',
+        rows,
+        '</tbody>',
+        '</table>',
+      ].join('');
+
+      table.querySelectorAll('td.module').forEach((cell) => {
+        cell.addEventListener('click', () => {
+          vscode.postMessage({ type: 'runTargetForModule', moduleId: cell.dataset.module });
+        });
+      });
+
+      table.querySelectorAll('th.target-header').forEach((header) => {
+        header.addEventListener('click', () => {
+          vscode.postMessage({ type: 'runTargetForAllModules', target: header.dataset.target });
+        });
+      });
+
+      table.querySelectorAll('[data-run="true"]').forEach((runButton) => {
+        runButton.addEventListener('click', (event) => {
+          const cell = event.target.closest('td');
+          vscode.postMessage({ type: 'runTarget', moduleId: cell.dataset.module, target: cell.dataset.target });
+        });
+      });
+
+      table.querySelectorAll('[data-reveal="true"]').forEach((status) => {
+        status.addEventListener('click', (event) => {
+          const cell = event.target.closest('td');
+          vscode.postMessage({ type: 'reveal', moduleId: cell.dataset.module, target: cell.dataset.target });
+        });
+      });
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'state') {
+        render(event.data.payload);
+      }
+    });
+  </script>
+</body>
+</html>`;
+  }
+}
