@@ -340,12 +340,15 @@ export class DashboardController implements vscode.Disposable {
           output: this.formatConfigureError(error),
           updatedAt: Date.now(),
         });
+        this.pushState();
       }
       this.stateStore.setNeedsConfigure(moduleInfo.id, true);
       for (const target of this.stateStore.getState().targets) {
         this.stateStore.setAvailability(moduleInfo.id, target.name, false);
       }
-      throw error;
+      if (!updateStatus) {
+        throw error;
+      }
     }
   }
 
@@ -428,10 +431,21 @@ export class DashboardController implements vscode.Disposable {
 
   private formatConfigureError(error: unknown): string {
     if (error && typeof error === 'object' && 'stdout' in error && 'stderr' in error) {
-      const stdout = typeof error.stdout === 'string' ? error.stdout : '';
-      const stderr = typeof error.stderr === 'string' ? error.stderr : '';
+      const stdout =
+        typeof error.stdout === 'string'
+          ? error.stdout
+          : Buffer.isBuffer(error.stdout)
+            ? error.stdout.toString()
+            : '';
+      const stderr =
+        typeof error.stderr === 'string'
+          ? error.stderr
+          : Buffer.isBuffer(error.stderr)
+            ? error.stderr.toString()
+            : '';
+      const code = 'code' in error ? `Exit code: ${String(error.code)}` : '';
       const message = 'message' in error && typeof error.message === 'string' ? error.message : 'Configure failed.';
-      return [message, stdout, stderr].filter(Boolean).join('\n');
+      return [message, code, stdout, stderr].filter(Boolean).join('\n');
     }
     if (error instanceof Error) {
       return error.message;
