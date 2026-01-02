@@ -6,6 +6,7 @@ export type WebviewMessage =
   | { type: 'runTargetForModule'; moduleId: string }
   | { type: 'runTargetForAllModules'; target: string }
   | { type: 'reveal'; moduleId: string; target: string }
+  | { type: 'configureModule'; moduleId: string }
   | { type: 'refresh' }
   | { type: 'runAll' }
   | { type: 'rerunFailed' }
@@ -67,6 +68,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .status.success { color: var(--vscode-terminal-ansiGreen); }
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
+    .module-actions { display: inline-flex; gap: 6px; margin-left: 8px; }
+    .module-actions button { font-size: 11px; padding: 2px 6px; }
   </style>
 </head>
 <body>
@@ -97,6 +100,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         '<th data-target=\"' + target.name + '\" class=\"target-header\">' + target.name + '</th>',
       ).join('');
       const rows = state.modules.map((moduleState) => {
+        const moduleActions = moduleState.needsConfigure
+          ? '<span class=\"module-actions\"><button data-configure=\"true\" data-module=\"' + moduleState.module.id + '\">Configure</button></span>'
+          : '';
         const cells = state.targets.map((target) => {
           const available = moduleState.availability[target.name];
           const run = moduleState.runs[target.name] || { status: 'idle' };
@@ -116,7 +122,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         }).join('');
         return [
           '<tr>',
-          '<td class=\"module\" data-module=\"' + moduleState.module.id + '\">' + moduleState.module.name + '</td>',
+          '<td class=\"module\" data-module=\"' + moduleState.module.id + '\">' + moduleState.module.name + moduleActions + '</td>',
           cells,
           '</tr>',
         ].join('');
@@ -139,6 +145,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       table.querySelectorAll('td.module').forEach((cell) => {
         cell.addEventListener('click', () => {
           vscode.postMessage({ type: 'runTargetForModule', moduleId: cell.dataset.module });
+        });
+      });
+
+      table.querySelectorAll('button[data-configure=\"true\"]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          vscode.postMessage({ type: 'configureModule', moduleId: button.dataset.module });
         });
       });
 

@@ -19,6 +19,7 @@ export class StateStore {
       module,
       availability: {},
       runs: {},
+      needsConfigure: false,
     }));
     for (const moduleState of this.modules) {
       for (const target of this.targets) {
@@ -31,6 +32,13 @@ export class StateStore {
     const moduleState = this.modules.find((state) => state.module.id === moduleId);
     if (moduleState) {
       moduleState.generator = generator;
+    }
+  }
+
+  setNeedsConfigure(moduleId: string, needsConfigure: boolean): void {
+    const moduleState = this.modules.find((state) => state.module.id === moduleId);
+    if (moduleState) {
+      moduleState.needsConfigure = needsConfigure;
     }
   }
 

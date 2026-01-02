@@ -30,6 +30,7 @@ export interface ModuleState {
   availability: TargetAvailability;
   runs: Record<string, RunResult>;
   generator?: CMakeGenerator;
+  needsConfigure?: boolean;
 }
 
 export interface DashboardState {

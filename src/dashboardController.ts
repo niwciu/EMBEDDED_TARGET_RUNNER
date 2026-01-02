@@ -2,6 +2,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ensureConfigured, hasCMakeCache } from './cmake/configure';
+import { selectGenerator } from './cmake/generator';
 import { detectTargets } from './cmake/targets';
 import { BuildSystem } from './cmake/generator';
 import { discoverModules } from './discovery/modules';
@@ -133,36 +134,31 @@ export class DashboardController implements vscode.Disposable {
     }
   }
 
+  async configureModule(moduleId: string): Promise<void> {
+    const moduleState = this.stateStore.getState().modules.find((state) => state.module.id === moduleId);
+    if (!moduleState) {
+      return;
+    }
+    const settings = this.getSettings();
+    const selectedSettings = await this.pickGeneratorIfNeeded(moduleState.module.name, settings);
+    if (!selectedSettings) {
+      return;
+    }
+    await this.configureAndDetect(moduleState.module, selectedSettings, false);
+    this.pushState();
+  }
+
   private async refreshModule(moduleInfo: ModuleInfo, settings: RunnerSettings): Promise<void> {
     try {
-      if (settings.buildSystem === 'auto' && !(await hasCMakeCache(moduleInfo.path))) {
-        const selection = await vscode.window.showQuickPick(
-          [
-            { label: 'Ninja', description: 'Fast builds with Ninja' },
-            { label: 'Unix Makefiles', description: 'Use Makefiles' },
-          ],
-          {
-            placeHolder: `Select CMake generator for ${moduleInfo.name}`,
-          },
-        );
-        if (selection?.label === 'Ninja') {
-          settings = { ...settings, buildSystem: 'ninja' };
-        } else if (selection?.label === 'Unix Makefiles') {
-          settings = { ...settings, buildSystem: 'make' };
-        } else {
-          for (const target of this.stateStore.getState().targets) {
-            this.stateStore.setAvailability(moduleInfo.id, target.name, false);
-          }
-          return;
+      if (!(await hasCMakeCache(moduleInfo.path))) {
+        this.stateStore.setNeedsConfigure(moduleInfo.id, true);
+        for (const target of this.stateStore.getState().targets) {
+          this.stateStore.setAvailability(moduleInfo.id, target.name, false);
         }
+        return;
       }
 
-      const configureResult = await ensureConfigured(moduleInfo.path, settings.buildSystem);
-      this.stateStore.setModuleGenerator(moduleInfo.id, configureResult.generator);
-      const targets = await detectTargets(moduleInfo.path, configureResult.generator);
-      for (const target of this.stateStore.getState().targets) {
-        this.stateStore.setAvailability(moduleInfo.id, target.name, targets.has(target.name));
-      }
+      await this.configureAndDetect(moduleInfo, settings, true);
     } catch (error) {
       for (const target of this.stateStore.getState().targets) {
         this.stateStore.setAvailability(moduleInfo.id, target.name, false);
@@ -210,12 +206,56 @@ export class DashboardController implements vscode.Disposable {
       case 'runTargetForAllModules':
         this.runTargetForAllModules(message.target);
         break;
+      case 'configureModule':
+        void this.configureModule(message.moduleId);
+        break;
       case 'reveal':
         this.runner.reveal(message.moduleId, message.target);
         break;
       default:
         break;
     }
+  }
+
+  private async configureAndDetect(
+    moduleInfo: ModuleInfo,
+    settings: RunnerSettings,
+    skipConfigure: boolean,
+  ): Promise<void> {
+    const configureResult = skipConfigure
+      ? { configured: false, generator: await selectGenerator(settings.buildSystem, path.join(moduleInfo.path, 'out')) }
+      : await ensureConfigured(moduleInfo.path, settings.buildSystem);
+    this.stateStore.setModuleGenerator(moduleInfo.id, configureResult.generator);
+    this.stateStore.setNeedsConfigure(moduleInfo.id, false);
+    const targets = await detectTargets(moduleInfo.path, configureResult.generator);
+    for (const target of this.stateStore.getState().targets) {
+      this.stateStore.setAvailability(moduleInfo.id, target.name, targets.has(target.name));
+    }
+  }
+
+  private async pickGeneratorIfNeeded(
+    moduleName: string,
+    settings: RunnerSettings,
+  ): Promise<RunnerSettings | null> {
+    if (settings.buildSystem !== 'auto') {
+      return settings;
+    }
+    const selection = await vscode.window.showQuickPick(
+      [
+        { label: 'Ninja', description: 'Fast builds with Ninja' },
+        { label: 'Unix Makefiles', description: 'Use Makefiles' },
+      ],
+      {
+        placeHolder: `Select CMake generator for ${moduleName}`,
+      },
+    );
+    if (selection?.label === 'Ninja') {
+      return { ...settings, buildSystem: 'ninja' };
+    }
+    if (selection?.label === 'Unix Makefiles') {
+      return { ...settings, buildSystem: 'make' };
+    }
+    return null;
   }
 
   private enqueueRunById(moduleId: string, target: string): void {
