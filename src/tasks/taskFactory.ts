@@ -4,13 +4,13 @@ import { ModuleInfo } from '../state/types';
 import { registerTaskName } from './taskRegistry';
 
 export interface TargetTaskDefinition extends vscode.TaskDefinition {
-  type: 'targetsRunner';
+  type: 'targetsManager';
   moduleId: string;
   target: string;
 }
 
 export interface ConfigureTaskDefinition extends vscode.TaskDefinition {
-  type: 'targetsRunnerConfigure';
+  type: 'targetsManagerConfigure';
   moduleId: string;
 }
 
@@ -34,7 +34,7 @@ export function createTargetTask(
   const execution = new vscode.ShellExecution(command, args, { cwd });
 
   const definition: TargetTaskDefinition = {
-    type: 'targetsRunner',
+    type: 'targetsManager',
     moduleId: moduleInfo.id,
     target,
   };
@@ -44,7 +44,7 @@ export function createTargetTask(
     definition,
     moduleInfo.workspaceFolder,
     taskName,
-    'targetsRunner',
+    'targetsManager',
     execution,
     ['$gcc'],
   );
@@ -66,7 +66,7 @@ export function createConfigureTask(moduleInfo: ModuleInfo, generator: string): 
   });
 
   const definition: ConfigureTaskDefinition = {
-    type: 'targetsRunnerConfigure',
+    type: 'targetsManagerConfigure',
     moduleId: moduleInfo.id,
   };
 
@@ -75,7 +75,7 @@ export function createConfigureTask(moduleInfo: ModuleInfo, generator: string): 
     definition,
     moduleInfo.workspaceFolder,
     taskName,
-    'targetsRunner',
+    'targetsManager',
     execution,
     ['$gcc'],
   );

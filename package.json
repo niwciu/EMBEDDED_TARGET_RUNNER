@@ -16,71 +16,71 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:targetsRunner.menu",
-    "onCommand:targetsRunner.refresh",
-    "onCommand:targetsRunner.runAll",
-    "onCommand:targetsRunner.rerunFailed",
-    "onCommand:targetsRunner.stopAll",
-    "onCommand:targetsRunner.runTargetForModule",
-    "onCommand:targetsRunner.runTargetForAllModules",
-    "onCommand:targetsRunner.openDashboard",
-    "onCommand:targetsRunner.openSettings",
-    "onCommand:targetsRunner.menuAction"
+    "onView:targetsManager.menu",
+    "onCommand:targetsManager.refresh",
+    "onCommand:targetsManager.runAll",
+    "onCommand:targetsManager.rerunFailed",
+    "onCommand:targetsManager.stopAll",
+    "onCommand:targetsManager.runTargetForModule",
+    "onCommand:targetsManager.runTargetForAllModules",
+    "onCommand:targetsManager.openDashboard",
+    "onCommand:targetsManager.openSettings",
+    "onCommand:targetsManager.menuAction"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "targetsRunner",
+          "id": "targetsManager",
           "title": "Embedded Targets Manager",
           "icon": "resources/targets.svg"
         }
       ]
     },
     "views": {
-      "targetsRunner": [
+      "targetsManager": [
         {
-          "id": "targetsRunner.menu",
+          "id": "targetsManager.menu",
           "name": "EMBEDDED TARGETS MANAGER"
         }
       ]
     },
     "commands": [
       {
-        "command": "targetsRunner.refresh",
+        "command": "targetsManager.refresh",
         "title": "Targets Dashboard: Refresh"
       },
       {
-        "command": "targetsRunner.runAll",
+        "command": "targetsManager.runAll",
         "title": "Targets Dashboard: Run All"
       },
       {
-        "command": "targetsRunner.rerunFailed",
+        "command": "targetsManager.rerunFailed",
         "title": "Targets Dashboard: Rerun Failed"
       },
       {
-        "command": "targetsRunner.stopAll",
+        "command": "targetsManager.stopAll",
         "title": "Targets Dashboard: Stop All"
       },
       {
-        "command": "targetsRunner.runTargetForModule",
+        "command": "targetsManager.runTargetForModule",
         "title": "Targets Dashboard: Run Target for Module"
       },
       {
-        "command": "targetsRunner.runTargetForAllModules",
+        "command": "targetsManager.runTargetForAllModules",
         "title": "Targets Dashboard: Run Target for All Modules"
       },
       {
-        "command": "targetsRunner.openDashboard",
+        "command": "targetsManager.openDashboard",
         "title": "Targets Dashboard: Open Dashboard"
       },
       {
-        "command": "targetsRunner.openSettings",
+        "command": "targetsManager.openSettings",
         "title": "Targets Dashboard: Open Settings"
       },
       {
-        "command": "targetsRunner.menuAction",
+        "command": "targetsManager.menuAction",
         "title": "Targets Dashboard: Menu Action"
       }
     ],
@@ -88,13 +88,13 @@
       {
         "title": "Build System",
         "properties": {
-          "targetsRunner.buildSystem": {
+          "targetsManager.buildSystem": {
             "type": "string",
             "enum": ["auto", "ninja", "make"],
             "default": "auto",
             "description": "Build system to use when configuring modules."
           },
-          "targetsRunner.makeJobs": {
+          "targetsManager.makeJobs": {
             "oneOf": [
               {
                 "type": "string",
@@ -108,7 +108,7 @@
             "default": "auto",
             "description": "Number of jobs to pass to make."
           },
-          "targetsRunner.maxParallel": {
+          "targetsManager.maxParallel": {
             "type": "number",
             "default": 4,
             "minimum": 1,
@@ -119,7 +119,7 @@
       {
         "title": "Dashboards",
         "properties": {
-          "targetsRunner.dashboards": {
+          "targetsManager.dashboards": {
             "type": "array",
             "description": "Dashboards displayed in the Embedded Targets Manager menu.",
             "default": [

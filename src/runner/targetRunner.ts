@@ -99,7 +99,7 @@ export class TargetRunner implements vscode.Disposable {
 
   private handleTaskEnd(event: vscode.TaskProcessEndEvent): void {
     const definition = event.execution.task.definition as { type?: string; moduleId?: string; target?: string };
-    if (definition?.type !== 'targetsRunner' || !definition.moduleId || !definition.target) {
+    if (definition?.type !== 'targetsManager' || !definition.moduleId || !definition.target) {
       return;
     }
     const key = this.getKey(definition.moduleId, definition.target);
