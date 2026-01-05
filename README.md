@@ -21,10 +21,10 @@ A VS Code extension that discovers CMake modules from configured roots, shows da
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `targetsRunner.buildSystem` | `auto` | `auto`, `ninja`, or `make`. |
-| `targetsRunner.makeJobs` | `auto` | Number of make jobs (`auto` uses CPU count). |
-| `targetsRunner.maxParallel` | `4` | Maximum parallel target executions. |
-| `targetsRunner.dashboards` | See `package.json` | Dashboards shown in the Embedded Targets Manager menu. |
+| `targetsManager.buildSystem` | `auto` | `auto`, `ninja`, or `make`. |
+| `targetsManager.makeJobs` | `auto` | Number of make jobs (`auto` uses CPU count). |
+| `targetsManager.maxParallel` | `4` | Maximum parallel target executions. |
+| `targetsManager.dashboards` | See `package.json` | Dashboards shown in the Embedded Targets Manager menu. |
 
 Each dashboard supports:
 

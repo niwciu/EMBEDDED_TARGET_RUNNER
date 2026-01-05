@@ -40,7 +40,7 @@ export class DashboardViewProvider implements vscode.Disposable {
     }
 
     this.panel = vscode.window.createWebviewPanel(
-      'targetsRunner.dashboard',
+      'targetsManager.dashboard',
       this.title,
       vscode.ViewColumn.Active,
       {

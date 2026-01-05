@@ -78,7 +78,7 @@ export class DashboardController implements vscode.Disposable {
       }),
       vscode.tasks.onDidEndTaskProcess((event) => this.handleConfigureTaskEnd(event)),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('targetsRunner')) {
+        if (event.affectsConfiguration('targetsManager')) {
           this.applySettings();
         }
       }),
@@ -467,7 +467,7 @@ export class DashboardController implements vscode.Disposable {
 
   private handleConfigureTaskEnd(event: vscode.TaskProcessEndEvent): void {
     const definition = event.execution.task.definition as { type?: string; moduleId?: string };
-    if (definition?.type !== 'targetsRunnerConfigure' || !definition.moduleId) {
+    if (definition?.type !== 'targetsManagerConfigure' || !definition.moduleId) {
       return;
     }
     const resolver = this.configureResolvers.get(definition.moduleId);
@@ -522,7 +522,7 @@ export class DashboardController implements vscode.Disposable {
   }
 
   private getRunnerSettings(): RunnerSettings {
-    const config = vscode.workspace.getConfiguration('targetsRunner');
+    const config = vscode.workspace.getConfiguration('targetsManager');
     return {
       buildSystem: config.get<BuildSystem>('buildSystem', 'auto'),
       makeJobs: config.get<string | number>('makeJobs', 'auto'),

@@ -41,7 +41,7 @@ export class SettingsViewProvider implements vscode.Disposable {
     }
 
     this.panel = vscode.window.createWebviewPanel(
-      'targetsRunner.settings',
+      'targetsManager.settings',
       'Embedded Targets Manager Settings',
       vscode.ViewColumn.Active,
       {

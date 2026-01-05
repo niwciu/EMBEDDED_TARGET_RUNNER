@@ -30,14 +30,14 @@ const normalizeDashboards = (dashboards: DashboardDefinition[]): DashboardDefini
     .filter((dashboard) => dashboard.moduleRoots.length > 0);
 
 const getDashboards = (): DashboardDefinition[] => {
-  const config = vscode.workspace.getConfiguration('targetsRunner');
+  const config = vscode.workspace.getConfiguration('targetsManager');
   const configured = config.get<DashboardDefinition[]>('dashboards', DEFAULT_DASHBOARDS);
   const normalized = normalizeDashboards(configured);
   return normalized.length > 0 ? normalized : DEFAULT_DASHBOARDS;
 };
 
 const getBuildSettings = (): Pick<SettingsState, 'buildSystem' | 'makeJobs' | 'maxParallel'> => {
-  const config = vscode.workspace.getConfiguration('targetsRunner');
+  const config = vscode.workspace.getConfiguration('targetsManager');
   return {
     buildSystem: config.get<string>('buildSystem', 'auto'),
     makeJobs: config.get<string | number>('makeJobs', 'auto'),
@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
       dashboards: getDashboards(),
     }),
     async (message) => {
-      const config = vscode.workspace.getConfiguration('targetsRunner');
+      const config = vscode.workspace.getConfiguration('targetsManager');
       if (message.type === 'ready') {
         settingsViewProvider.refresh();
       }
@@ -93,18 +93,18 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     menuViewProvider,
     settingsViewProvider,
-    vscode.window.registerTreeDataProvider('targetsRunner.menu', menuViewProvider),
-    vscode.commands.registerCommand('targetsRunner.refresh', () => activeController?.refresh()),
-    vscode.commands.registerCommand('targetsRunner.runAll', () => activeController?.runAll()),
-    vscode.commands.registerCommand('targetsRunner.rerunFailed', () => activeController?.rerunFailed()),
-    vscode.commands.registerCommand('targetsRunner.stopAll', () => activeController?.stopAll()),
-    vscode.commands.registerCommand('targetsRunner.runTargetForModule', (moduleId: string) =>
+    vscode.window.registerTreeDataProvider('targetsManager.menu', menuViewProvider),
+    vscode.commands.registerCommand('targetsManager.refresh', () => activeController?.refresh()),
+    vscode.commands.registerCommand('targetsManager.runAll', () => activeController?.runAll()),
+    vscode.commands.registerCommand('targetsManager.rerunFailed', () => activeController?.rerunFailed()),
+    vscode.commands.registerCommand('targetsManager.stopAll', () => activeController?.stopAll()),
+    vscode.commands.registerCommand('targetsManager.runTargetForModule', (moduleId: string) =>
       activeController?.runTargetForModule(moduleId),
     ),
-    vscode.commands.registerCommand('targetsRunner.runTargetForAllModules', (target: string) =>
+    vscode.commands.registerCommand('targetsManager.runTargetForAllModules', (target: string) =>
       activeController?.runTargetForAllModules(target),
     ),
-    vscode.commands.registerCommand('targetsRunner.openDashboard', async (name?: string) => {
+    vscode.commands.registerCommand('targetsManager.openDashboard', async (name?: string) => {
       if (dashboardControllers.length === 0) {
         await vscode.window.showWarningMessage('No dashboards are configured.');
         return;
@@ -126,20 +126,20 @@ export function activate(context: vscode.ExtensionContext): void {
       activeController = controller;
       controller.showDashboard();
     }),
-    vscode.commands.registerCommand('targetsRunner.openSettings', () => settingsViewProvider.show()),
+    vscode.commands.registerCommand('targetsManager.openSettings', () => settingsViewProvider.show()),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('targetsRunner.dashboards')) {
+      if (event.affectsConfiguration('targetsManager.dashboards')) {
         updateDashboardControllers();
       }
       if (
-        event.affectsConfiguration('targetsRunner.buildSystem') ||
-        event.affectsConfiguration('targetsRunner.makeJobs') ||
-        event.affectsConfiguration('targetsRunner.maxParallel')
+        event.affectsConfiguration('targetsManager.buildSystem') ||
+        event.affectsConfiguration('targetsManager.makeJobs') ||
+        event.affectsConfiguration('targetsManager.maxParallel')
       ) {
         settingsViewProvider.refresh();
       }
     }),
-    vscode.commands.registerCommand('targetsRunner.menuAction', async (action: string) => {
+    vscode.commands.registerCommand('targetsManager.menuAction', async (action: string) => {
       const label = action
         ? action
             .replace(/([A-Z])/g, ' $1')

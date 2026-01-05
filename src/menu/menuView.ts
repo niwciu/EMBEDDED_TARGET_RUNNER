@@ -11,14 +11,14 @@ const createMenuStructure = (dashboards: string[]): MenuItemDefinition[] => [
     label: 'Options',
     command: {
       title: 'Options',
-      command: 'targetsRunner.openSettings',
+      command: 'targetsManager.openSettings',
     },
   },
   ...dashboards.map((name) => ({
     label: name,
     command: {
       title: name,
-      command: 'targetsRunner.openDashboard',
+      command: 'targetsManager.openDashboard',
       arguments: [name],
     },
   })),

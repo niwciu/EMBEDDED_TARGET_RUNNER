@@ -21,7 +21,7 @@ export function clearRegisteredTaskTerminals(): void {
 export function terminateAllRunnerTasks(): void {
   for (const execution of vscode.tasks.taskExecutions) {
     const definition = execution.task.definition as { type?: string };
-    if (definition?.type === 'targetsRunner' || definition?.type === 'targetsRunnerConfigure') {
+    if (definition?.type === 'targetsManager' || definition?.type === 'targetsManagerConfigure') {
       execution.terminate();
     }
   }
