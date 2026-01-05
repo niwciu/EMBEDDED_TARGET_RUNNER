@@ -12,6 +12,7 @@ import { ModuleInfo } from './state/types';
 import { DashboardViewProvider, WebviewMessage } from './webview/dashboardView';
 import * as fs from 'fs/promises';
 import { createConfigureTask } from './tasks/taskFactory';
+import { terminateAllRunnerTasks } from './tasks/taskRegistry';
 
 interface RunnerSettings {
   buildSystem: BuildSystem;
@@ -170,20 +171,9 @@ export class DashboardController implements vscode.Disposable {
   }
 
   clearAllTasks(): void {
+    terminateAllRunnerTasks();
     this.runner.stopAll();
     this.runner.clearAllTerminals();
-    const configureNames = new Set<string>();
-    for (const moduleState of this.stateStore.getState().modules) {
-      configureNames.add(`${moduleState.module.name}:configure`);
-    }
-    for (const taskName of this.configureTaskNames.values()) {
-      configureNames.add(taskName);
-    }
-    for (const terminal of vscode.window.terminals) {
-      if (configureNames.has(terminal.name)) {
-        terminal.dispose();
-      }
-    }
     this.configureTaskNames.clear();
   }
 

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
+import { registerTaskName } from './taskRegistry';
 
 export interface TargetTaskDefinition extends vscode.TaskDefinition {
   type: 'targetsRunner';
@@ -38,15 +39,17 @@ export function createTargetTask(
     target,
   };
 
+  const taskName = `${moduleInfo.name}:${target}`;
   const task = new vscode.Task(
     definition,
     moduleInfo.workspaceFolder,
-    `${moduleInfo.name}:${target}`,
+    taskName,
     'targetsRunner',
     execution,
     ['$gcc'],
   );
 
+  registerTaskName(taskName);
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Never,
     panel: vscode.TaskPanelKind.Dedicated,
@@ -67,15 +70,17 @@ export function createConfigureTask(moduleInfo: ModuleInfo, generator: string): 
     moduleId: moduleInfo.id,
   };
 
+  const taskName = `${moduleInfo.name}:configure`;
   const task = new vscode.Task(
     definition,
     moduleInfo.workspaceFolder,
-    `${moduleInfo.name}:configure`,
+    taskName,
     'targetsRunner',
     execution,
     ['$gcc'],
   );
 
+  registerTaskName(taskName);
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Never,
     panel: vscode.TaskPanelKind.Dedicated,
