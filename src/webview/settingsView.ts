@@ -170,7 +170,7 @@ export class SettingsViewProvider implements vscode.Disposable {
 
     const toLineList = (value) =>
       value
-        .split(/\r?\n|,/)
+        .split(/\\r?\\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
 
