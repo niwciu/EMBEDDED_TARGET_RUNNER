@@ -6,7 +6,6 @@ import { selectGenerator } from './cmake/generator';
 import { detectTargets } from './cmake/targets';
 import { BuildSystem } from './cmake/generator';
 import { discoverModules } from './discovery/modules';
-import { loadTargets } from './discovery/targets';
 import { TargetRunner } from './runner/targetRunner';
 import { StateStore } from './state/stateStore';
 import { ModuleInfo } from './state/types';
@@ -15,24 +14,30 @@ import * as fs from 'fs/promises';
 import { createConfigureTask } from './tasks/taskFactory';
 
 interface RunnerSettings {
-  modulesRoot: string;
-  targetsFile: string;
   buildSystem: BuildSystem;
   makeJobs: string | number;
   maxParallel: number;
-  excludedModules: string[];
 }
 
+export type DashboardDefinition = {
+  name: string;
+  moduleRoots: string[];
+  excludedModules: string[];
+  targets: string[];
+};
+
 interface DashboardControllerOptions {
-  modulesRootKey: string;
+  name: string;
+  moduleRoots: string[];
+  excludedModules: string[];
+  targets: string[];
   moduleLabel: string;
   actionsLabel: string;
   title: string;
-  targetsListKey: 'targets' | 'all_test_targets' | 'test' | 'hw' | 'hw_test' | 'ci' | 'reports' | 'format';
-  defaultTargets: string[];
 }
 
 export class DashboardController implements vscode.Disposable {
+  readonly name: string;
   private readonly stateStore = new StateStore();
   private readonly runner: TargetRunner;
   private readonly viewProvider: DashboardViewProvider;
@@ -44,7 +49,8 @@ export class DashboardController implements vscode.Disposable {
 
   constructor(private readonly context: vscode.ExtensionContext, options: DashboardControllerOptions) {
     this.options = options;
-    const settings = this.getSettings();
+    this.name = options.name;
+    const settings = this.getRunnerSettings();
     this.runner = new TargetRunner(settings.maxParallel);
     this.viewProvider = new DashboardViewProvider(
       context.extensionUri,
@@ -57,7 +63,6 @@ export class DashboardController implements vscode.Disposable {
     this.disposables.push(
       this.viewProvider,
       this.runner,
-      this.configureOutput,
       this.runner.onDidUpdate((update) => {
         if (update.status === 'running') {
           this.stateStore.updateRun(update.moduleId, update.target, { status: 'running', startedAt: Date.now() });
@@ -92,7 +97,7 @@ export class DashboardController implements vscode.Disposable {
   }
 
   async refresh(): Promise<void> {
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     const folders = vscode.workspace.workspaceFolders ?? [];
     if (folders.length === 0) {
       this.stateStore.setTargets([]);
@@ -101,17 +106,14 @@ export class DashboardController implements vscode.Disposable {
       return;
     }
 
-    const targetLists = await Promise.all(
-      folders.map((folder) =>
-        loadTargets(folder, settings.targetsFile, this.options.targetsListKey, this.options.defaultTargets),
-      ),
-    );
-    const mergedTargets = this.mergeTargets(targetLists);
-    this.stateStore.setTargets(mergedTargets);
+    const targets = this.options.targets.map((name) => ({ name }));
+    this.stateStore.setTargets(targets);
 
-    const excluded = new Set(settings.excludedModules);
+    const excluded = new Set(this.options.excludedModules);
     const discovered = await Promise.all(
-      folders.map((folder) => discoverModules(folder, settings.modulesRoot, excluded)),
+      folders.flatMap((folder) =>
+        this.options.moduleRoots.map((moduleRoot) => discoverModules(folder, moduleRoot, excluded)),
+      ),
     );
     const modules = discovered.flat();
     this.stateStore.setModules(modules);
@@ -129,7 +131,7 @@ export class DashboardController implements vscode.Disposable {
   }
 
   runAll(): void {
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     for (const request of this.stateStore.getAllTargets()) {
       this.enqueueRun(request.module, request.target, settings);
     }
@@ -140,7 +142,7 @@ export class DashboardController implements vscode.Disposable {
     if (modules.length === 0) {
       return;
     }
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     const selectedSettings = await this.pickGeneratorForAll(settings);
     if (!selectedSettings) {
       return;
@@ -157,7 +159,7 @@ export class DashboardController implements vscode.Disposable {
   }
 
   rerunFailed(): void {
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     for (const request of this.stateStore.getFailedTargets()) {
       this.enqueueRun(request.module, request.target, settings);
     }
@@ -172,7 +174,7 @@ export class DashboardController implements vscode.Disposable {
     if (!moduleState) {
       return;
     }
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     for (const target of this.stateStore.getState().targets) {
       if (moduleState.availability[target.name]) {
         this.enqueueRun(moduleState.module, target.name, settings);
@@ -181,7 +183,7 @@ export class DashboardController implements vscode.Disposable {
   }
 
   runTargetForAllModules(target: string): void {
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     for (const moduleState of this.stateStore.getState().modules) {
       if (moduleState.availability[target]) {
         this.enqueueRun(moduleState.module, target, settings);
@@ -194,7 +196,7 @@ export class DashboardController implements vscode.Disposable {
     if (!moduleState) {
       return;
     }
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     const selectedSettings = await this.pickGeneratorIfNeeded(moduleState.module.name, settings);
     if (!selectedSettings) {
       return;
@@ -425,7 +427,7 @@ export class DashboardController implements vscode.Disposable {
     if (!moduleState) {
       return;
     }
-    this.enqueueRun(moduleState.module, target, this.getSettings());
+    this.enqueueRun(moduleState.module, target, this.getRunnerSettings());
   }
 
   private revealConfigureOutput(moduleId: string): void {
@@ -488,21 +490,6 @@ export class DashboardController implements vscode.Disposable {
     return 'Configure failed.';
   }
 
-  private mergeTargets(targetLists: Array<{ name: string }[]>): Array<{ name: string }> {
-    const merged: Array<{ name: string }> = [];
-    const seen = new Set<string>();
-    for (const list of targetLists) {
-      for (const target of list) {
-        if (seen.has(target.name)) {
-          continue;
-        }
-        seen.add(target.name);
-        merged.push(target);
-      }
-    }
-    return merged;
-  }
-
   private pushState(): void {
     this.viewProvider.setState(this.stateStore.getState());
   }
@@ -513,41 +500,22 @@ export class DashboardController implements vscode.Disposable {
     }
     this.watchers.length = 0;
 
-    const settings = this.getSettings();
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    for (const folder of folders) {
-      const pattern = new vscode.RelativePattern(folder, settings.targetsFile);
-      const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-      watcher.onDidChange(() => this.refresh());
-      watcher.onDidCreate(() => this.refresh());
-      watcher.onDidDelete(() => this.refresh());
-      this.watchers.push(watcher);
-    }
+    // No file watchers configured for dashboard settings.
   }
 
   private applySettings(): void {
-    const settings = this.getSettings();
+    const settings = this.getRunnerSettings();
     this.runner.setMaxParallel(settings.maxParallel);
     this.setupWatchers();
     void this.refresh();
   }
 
-  private getSettings(): RunnerSettings {
+  private getRunnerSettings(): RunnerSettings {
     const config = vscode.workspace.getConfiguration('targetsRunner');
     return {
-      modulesRoot: config.get<string>(this.options.modulesRootKey, config.get<string>('modulesRoot', 'test')),
-      targetsFile: config.get<string>('targetsFile', 'epm_targets_lists.json'),
       buildSystem: config.get<BuildSystem>('buildSystem', 'auto'),
       makeJobs: config.get<string | number>('makeJobs', 'auto'),
       maxParallel: config.get<number>('maxParallel', 4),
-      excludedModules: config.get<string[]>('excludedModules', [
-        'unity',
-        'cmock',
-        'CMock',
-        'Cmock',
-        'Unity',
-        'template',
-      ]),
     };
   }
 }
