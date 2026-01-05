@@ -1,6 +1,6 @@
 {
   "name": "embedded-target-runner",
-  "displayName": "Embedded Project Manager",
+  "displayName": "Embedded Targets Manager",
   "description": "Dashboard to discover and run CMake custom targets across embedded test modules.",
   "version": "0.1.0",
   "publisher": "embedded",
@@ -33,7 +33,7 @@
       "activitybar": [
         {
           "id": "targetsRunner",
-          "title": "Embedded Project Manager",
+          "title": "Embedded Targets Manager",
           "icon": "resources/targets.svg"
         }
       ]
@@ -42,7 +42,7 @@
       "targetsRunner": [
         {
           "id": "targetsRunner.menu",
-          "name": "EMBEDDED PROJECT MANAGER: TARGETS DASHBOARD"
+          "name": "EMBEDDED TARGETS MANAGER: TARGETS DASHBOARD"
         }
       ]
     },

@@ -8,94 +8,16 @@ type MenuItemDefinition = {
 
 const MENU_STRUCTURE: MenuItemDefinition[] = [
   {
-    label: 'Project',
-    children: [
-      {
-        label: 'Create project',
-        command: {
-          title: 'Create project',
-          command: 'targetsRunner.menuAction',
-          arguments: ['createProject'],
-        },
-      },
-      {
-        label: 'Format all source in project',
-        command: {
-          title: 'Format all source in project',
-          command: 'targetsRunner.menuAction',
-          arguments: ['formatAllSource'],
-        },
-      },
-    ],
-  },
-  {
-    label: 'Test',
-    children: [
-      {
-        label: 'Add new test module',
-        command: {
-          title: 'Add new test module',
-          command: 'targetsRunner.menuAction',
-          arguments: ['addTestModule'],
-        },
-      },
-      {
-        label: 'Add new test group',
-        command: {
-          title: 'Add new test group',
-          command: 'targetsRunner.menuAction',
-          arguments: ['addTestGroup'],
-        },
-      },
-      {
-        label: 'Run all Tests',
-        command: {
-          title: 'Run all Tests',
-          command: 'targetsRunner.menuAction',
-          arguments: ['runAllTests'],
-        },
-      },
-      {
-        label: 'Targets Dashboard',
-        command: {
-          title: 'Targets Dashboard',
-          command: 'targetsRunner.openDashboard',
-        },
-      },
-    ],
-  },
-  {
-    label: 'CI Checks',
+    label: 'Targets Dashboard Manager',
     command: {
-      title: 'CI Checks',
-      command: 'targetsRunner.menuAction',
-      arguments: ['ciChecks'],
+      title: 'Targets Dashboard Manager',
+      command: 'targetsRunner.openDashboard',
     },
   },
   {
-    label: 'Generate Reports',
+    label: 'Targets Manager Options',
     command: {
-      title: 'Generate Reports',
-      command: 'targetsRunner.menuAction',
-      arguments: ['generateReports'],
-    },
-  },
-  {
-    label: 'HW Configurations',
-    children: [
-      {
-        label: 'Targets Dashboard',
-        command: {
-          title: 'Targets Dashboard',
-          command: 'targetsRunner.openHwDashboard',
-        },
-      },
-    ],
-  },
-  {
-    label: 'Project Manager Options',
-    command: {
-      title: 'Project Manager Options',
+      title: 'Targets Manager Options',
       command: 'workbench.action.openSettings',
       arguments: ['@ext:embedded.embedded-target-runner'],
     },
