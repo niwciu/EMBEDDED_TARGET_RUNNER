@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
 import { createTargetTask } from '../tasks/taskFactory';
+import { clearRegisteredTaskTerminals } from '../tasks/taskRegistry';
 
 export interface RunUpdate {
   moduleId: string;
@@ -64,6 +65,11 @@ export class TargetRunner implements vscode.Disposable {
       execution.terminate();
     }
     this.pending.length = 0;
+  }
+
+  clearAllTerminals(): void {
+    clearRegisteredTaskTerminals();
+    this.taskNames.clear();
   }
 
   dispose(): void {

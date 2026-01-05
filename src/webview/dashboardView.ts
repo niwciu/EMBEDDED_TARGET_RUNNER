@@ -13,7 +13,8 @@ export type WebviewMessage =
   | { type: 'refresh' }
   | { type: 'runAll' }
   | { type: 'rerunFailed' }
-  | { type: 'stopAll' };
+  | { type: 'stopAll' }
+  | { type: 'clearAllTasks' };
 
 export class DashboardViewProvider implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
@@ -113,6 +114,7 @@ export class DashboardViewProvider implements vscode.Disposable {
     <button data-action="runAll">Run All</button>
     <button data-action="rerunFailed">Rerun Failed</button>
     <button data-action="stopAll">Stop All</button>
+    <button data-action="clearAllTasks">Clear Tasks</button>
   </div>
   <div id="table"></div>
   <script nonce="${nonce}">

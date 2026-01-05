@@ -12,6 +12,7 @@ import { ModuleInfo } from './state/types';
 import { DashboardViewProvider, WebviewMessage } from './webview/dashboardView';
 import * as fs from 'fs/promises';
 import { createConfigureTask } from './tasks/taskFactory';
+import { terminateAllRunnerTasks } from './tasks/taskRegistry';
 
 interface RunnerSettings {
   buildSystem: BuildSystem;
@@ -169,6 +170,13 @@ export class DashboardController implements vscode.Disposable {
     this.runner.stopAll();
   }
 
+  clearAllTasks(): void {
+    terminateAllRunnerTasks();
+    this.runner.stopAll();
+    this.runner.clearAllTerminals();
+    this.configureTaskNames.clear();
+  }
+
   runTargetForModule(moduleId: string): void {
     const moduleState = this.stateStore.getState().modules.find((state) => state.module.id === moduleId);
     if (!moduleState) {
@@ -275,6 +283,9 @@ export class DashboardController implements vscode.Disposable {
         break;
       case 'stopAll':
         this.stopAll();
+        break;
+      case 'clearAllTasks':
+        this.clearAllTasks();
         break;
       case 'runTarget':
         this.enqueueRunById(message.moduleId, message.target);
