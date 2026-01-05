@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { DashboardController, DashboardDefinition } from './dashboardController';
 import { MenuViewProvider } from './menu/menuView';
 import { DEFAULT_ALL_TEST_TARGETS } from './discovery/targets';
+import { SettingsViewProvider, SettingsState } from './webview/settingsView';
 
 let dashboardControllers: DashboardController[] = [];
 let activeController: DashboardController | undefined;
@@ -35,8 +36,56 @@ const getDashboards = (): DashboardDefinition[] => {
   return normalized.length > 0 ? normalized : DEFAULT_DASHBOARDS;
 };
 
+const getBuildSettings = (): Pick<SettingsState, 'buildSystem' | 'makeJobs' | 'maxParallel'> => {
+  const config = vscode.workspace.getConfiguration('targetsRunner');
+  return {
+    buildSystem: config.get<string>('buildSystem', 'auto'),
+    makeJobs: config.get<string | number>('makeJobs', 'auto'),
+    maxParallel: config.get<number>('maxParallel', 4),
+  };
+};
+
 export function activate(context: vscode.ExtensionContext): void {
   const menuViewProvider = new MenuViewProvider();
+  const settingsViewProvider = new SettingsViewProvider(
+    context.extensionUri,
+    () => ({
+      ...getBuildSettings(),
+      dashboards: getDashboards(),
+    }),
+    async (message) => {
+      const config = vscode.workspace.getConfiguration('targetsRunner');
+      if (message.type === 'updateBuildSettings') {
+        await config.update('buildSystem', message.payload.buildSystem, vscode.ConfigurationTarget.Workspace);
+        await config.update('makeJobs', message.payload.makeJobs, vscode.ConfigurationTarget.Workspace);
+        await config.update('maxParallel', message.payload.maxParallel, vscode.ConfigurationTarget.Workspace);
+        settingsViewProvider.refresh();
+      }
+      if (message.type === 'updateDashboards') {
+        await config.update('dashboards', message.payload, vscode.ConfigurationTarget.Workspace);
+        settingsViewProvider.refresh();
+      }
+    },
+  );
+
+  const rebuildDashboards = () => {
+    for (const controller of dashboardControllers) {
+      controller.dispose();
+    }
+    dashboardControllers = getDashboards().map(
+      (dashboard) =>
+        new DashboardController(context, {
+          ...dashboard,
+          moduleLabel: 'Module Name',
+          actionsLabel: 'Module Actions',
+          title: dashboard.name,
+        }),
+    );
+    activeController = dashboardControllers[0];
+    menuViewProvider.setDashboards(dashboardControllers.map((controller) => controller.name));
+  };
+
+  rebuildDashboards();
 
   const rebuildDashboards = () => {
     for (const controller of dashboardControllers) {
@@ -59,6 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     menuViewProvider,
+    settingsViewProvider,
     vscode.window.registerTreeDataProvider('targetsRunner.menu', menuViewProvider),
     vscode.commands.registerCommand('targetsRunner.refresh', () => activeController?.refresh()),
     vscode.commands.registerCommand('targetsRunner.runAll', () => activeController?.runAll()),
@@ -92,9 +142,17 @@ export function activate(context: vscode.ExtensionContext): void {
       activeController = controller;
       controller.showDashboard();
     }),
+    vscode.commands.registerCommand('targetsRunner.openSettings', () => settingsViewProvider.show()),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('targetsRunner.dashboards')) {
         rebuildDashboards();
+      }
+      if (
+        event.affectsConfiguration('targetsRunner.buildSystem') ||
+        event.affectsConfiguration('targetsRunner.makeJobs') ||
+        event.affectsConfiguration('targetsRunner.maxParallel')
+      ) {
+        settingsViewProvider.refresh();
       }
     }),
     vscode.commands.registerCommand('targetsRunner.menuAction', async (action: string) => {

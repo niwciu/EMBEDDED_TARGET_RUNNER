@@ -6,37 +6,22 @@ type MenuItemDefinition = {
   command?: vscode.Command;
 };
 
-const MENU_TITLE = 'Embedded Targets Manager';
-
 const createMenuStructure = (dashboards: string[]): MenuItemDefinition[] => [
   {
-    label: MENU_TITLE,
-    children: [
-      {
-        label: 'Options',
-        command: {
-          title: 'Options',
-          command: 'workbench.action.openSettings',
-          arguments: ['@ext:embedded.embedded-target-runner'],
-        },
-      },
-      {
-        label: 'Targets Dashboard Manager',
-        command: {
-          title: 'Targets Dashboard Manager',
-          command: 'targetsRunner.openDashboard',
-        },
-      },
-      ...dashboards.map((name) => ({
-        label: name,
-        command: {
-          title: name,
-          command: 'targetsRunner.openDashboard',
-          arguments: [name],
-        },
-      })),
-    ],
+    label: 'Options',
+    command: {
+      title: 'Options',
+      command: 'targetsRunner.openSettings',
+    },
   },
+  ...dashboards.map((name) => ({
+    label: name,
+    command: {
+      title: name,
+      command: 'targetsRunner.openDashboard',
+      arguments: [name],
+    },
+  })),
 ];
 
 class MenuTreeItem extends vscode.TreeItem {
