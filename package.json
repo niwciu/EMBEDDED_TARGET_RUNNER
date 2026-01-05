@@ -1,6 +1,6 @@
 {
   "name": "embedded-target-runner",
-  "displayName": "Embedded Project Manager",
+  "displayName": "Embedded Targets Manager",
   "description": "Dashboard to discover and run CMake custom targets across embedded test modules.",
   "version": "0.1.0",
   "publisher": "embedded",
@@ -24,7 +24,7 @@
     "onCommand:targetsRunner.runTargetForModule",
     "onCommand:targetsRunner.runTargetForAllModules",
     "onCommand:targetsRunner.openDashboard",
-    "onCommand:targetsRunner.openHwDashboard",
+    "onCommand:targetsRunner.openSettings",
     "onCommand:targetsRunner.menuAction"
   ],
   "main": "./out/extension.js",
@@ -33,7 +33,7 @@
       "activitybar": [
         {
           "id": "targetsRunner",
-          "title": "Embedded Project Manager",
+          "title": "Embedded Targets Manager",
           "icon": "resources/targets.svg"
         }
       ]
@@ -42,7 +42,7 @@
       "targetsRunner": [
         {
           "id": "targetsRunner.menu",
-          "name": "EMBEDDED PROJECT MANAGER: TARGETS DASHBOARD"
+          "name": "EMBEDDED TARGETS MANAGER"
         }
       ]
     },
@@ -76,79 +76,110 @@
         "title": "Targets Dashboard: Open Dashboard"
       },
       {
-        "command": "targetsRunner.openHwDashboard",
-        "title": "Targets Dashboard: Open HW Dashboard"
+        "command": "targetsRunner.openSettings",
+        "title": "Targets Dashboard: Open Settings"
       },
       {
         "command": "targetsRunner.menuAction",
         "title": "Targets Dashboard: Menu Action"
       }
     ],
-    "configuration": {
-      "title": "Targets Runner",
-      "properties": {
-        "targetsRunner.testModulesRoot": {
-          "type": "string",
-          "default": "test",
-          "description": "Root folder for test modules."
-        },
-        "targetsRunner.modulesRoot": {
-          "type": "string",
-          "default": "test",
-          "description": "Deprecated. Use Targets Runner: Test Modules Root instead.",
-          "deprecationMessage": "Use Targets Runner: Test Modules Root instead."
-        },
-        "targetsRunner.hwConfigurationsRoot": {
-          "type": "string",
-          "default": "hw",
-          "description": "Root folder for HW configurations."
-        },
-        "targetsRunner.hwTestRoot": {
-          "type": "string",
-          "default": "test/hw_test",
-          "description": "Root folder for HW tests."
-        },
-        "targetsRunner.targetsFile": {
-          "type": "string",
-          "default": "epm_targets_lists.json",
-          "description": "Path to targets JSON file relative to the workspace root."
-        },
-        "targetsRunner.buildSystem": {
-          "type": "string",
-          "enum": ["auto", "ninja", "make"],
-          "default": "auto",
-          "description": "Build system to use when configuring modules."
-        },
-        "targetsRunner.makeJobs": {
-          "oneOf": [
-            {
-              "type": "string",
-              "enum": ["auto"]
-            },
-            {
-              "type": "number",
-              "minimum": 1
-            }
-          ],
-          "default": "auto",
-          "description": "Number of jobs to pass to make."
-        },
-        "targetsRunner.maxParallel": {
-          "type": "number",
-          "default": 4,
-          "minimum": 1,
-          "description": "Maximum number of targets to run in parallel."
-        },
-        "targetsRunner.excludedModules": {
-          "type": "array",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "Build System",
+        "properties": {
+          "targetsRunner.buildSystem": {
+            "type": "string",
+            "enum": ["auto", "ninja", "make"],
+            "default": "auto",
+            "description": "Build system to use when configuring modules."
           },
-          "default": ["unity", "cmock", "CMock", "Cmock", "Unity", "template"],
-          "description": "Module names to exclude from discovery."
+          "targetsRunner.makeJobs": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["auto"]
+              },
+              {
+                "type": "number",
+                "minimum": 1
+              }
+            ],
+            "default": "auto",
+            "description": "Number of jobs to pass to make."
+          },
+          "targetsRunner.maxParallel": {
+            "type": "number",
+            "default": 4,
+            "minimum": 1,
+            "description": "Maximum number of targets to run in parallel."
+          }
+        }
+      },
+      {
+        "title": "Dashboards",
+        "properties": {
+          "targetsRunner.dashboards": {
+            "type": "array",
+            "description": "Dashboards displayed in the Embedded Targets Manager menu.",
+            "default": [
+              {
+                "name": "Targets Dashboard",
+                "moduleRoots": ["test"],
+                "excludedModules": ["unity", "cmock", "CMock", "Cmock", "Unity", "template"],
+                "targets": [
+                  "format",
+                  "format_test",
+                  "all",
+                  "run",
+                  "cppcheck",
+                  "ccm",
+                  "ccc",
+                  "ccmr",
+                  "ccr",
+                  "ccca",
+                  "ccra"
+                ]
+              }
+            ],
+            "items": {
+              "type": "object",
+              "required": ["name", "moduleRoots"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Dashboard name shown in the menu."
+                },
+                "moduleRoots": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "One or two module root paths relative to the workspace."
+                },
+                "excludedModules": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["unity", "cmock", "CMock", "Cmock", "Unity", "template"],
+                  "description": "Module names to exclude for this dashboard."
+                },
+                "targets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Targets displayed in this dashboard."
+                }
+              }
+            }
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm install && npm run compile",
