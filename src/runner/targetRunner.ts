@@ -28,7 +28,9 @@ export class TargetRunner implements vscode.Disposable {
 
   constructor(private maxParallel: number) {
     this.disposables.push(
-      vscode.tasks.onDidEndTaskProcess((event) => this.handleTaskEnd(event)),
+      vscode.tasks.onDidEndTaskProcess((event) => {
+        void this.handleTaskEnd(event);
+      }),
       this.updates,
     );
   }
@@ -100,26 +102,24 @@ export class TargetRunner implements vscode.Disposable {
     this.running.set(key, execution);
   }
 
-  private handleTaskEnd(event: vscode.TaskProcessEndEvent): void {
+  private async handleTaskEnd(event: vscode.TaskProcessEndEvent): Promise<void> {
     const definition = event.execution.task.definition as { type?: string; moduleId?: string; target?: string };
     if (definition?.type !== 'targetsManager' || !definition.moduleId || !definition.target) {
       return;
     }
     const key = this.getKey(definition.moduleId, definition.target);
     this.running.delete(key);
+    const modulePath = this.modulePaths.get(key);
     let status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
-    if (status === 'success') {
-      const modulePath = this.modulePaths.get(key);
-      if (modulePath) {
-        const current = this.getDiagnosticsCounts(modulePath);
-        if (current.errors > 0) {
-          status = 'failed';
-        } else if (current.warnings > 0) {
-          status = 'warning';
-        }
-      }
+    if (status === 'success' && modulePath) {
+      status = await this.resolveDiagnosticsStatus(modulePath);
     }
-    this.updates.fire({ moduleId: definition.moduleId, target: definition.target, status, exitCode: event.exitCode });
+    this.updates.fire({
+      moduleId: definition.moduleId,
+      target: definition.target,
+      status,
+      exitCode: event.exitCode,
+    });
     this.modulePaths.delete(key);
     this.kick();
   }
@@ -155,5 +155,67 @@ export class TargetRunner implements vscode.Disposable {
       }
     }
     return { warnings, errors };
+  }
+
+  private async resolveDiagnosticsStatus(modulePath: string): Promise<RunUpdate['status']> {
+    await this.waitForDiagnosticsIdle(modulePath);
+    const current = this.getDiagnosticsCounts(modulePath);
+    if (current.errors > 0) {
+      return 'failed';
+    }
+    if (current.warnings > 0) {
+      return 'warning';
+    }
+    return 'success';
+  }
+
+  private waitForDiagnosticsIdle(modulePath: string): Promise<void> {
+    const moduleRoot = path.resolve(modulePath);
+    const modulePrefix = moduleRoot.endsWith(path.sep) ? moduleRoot : moduleRoot + path.sep;
+    const quietWindowMs = 250;
+    const maxWaitMs = 2000;
+    let quietTimeout: NodeJS.Timeout | undefined;
+    let maxTimeout: NodeJS.Timeout | undefined;
+    let resolvePromise: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolvePromise = resolve;
+    });
+    const cleanup = () => {
+      if (quietTimeout) {
+        clearTimeout(quietTimeout);
+      }
+      if (maxTimeout) {
+        clearTimeout(maxTimeout);
+      }
+      disposable.dispose();
+      resolvePromise();
+    };
+    const bumpQuietTimer = () => {
+      if (quietTimeout) {
+        clearTimeout(quietTimeout);
+      }
+      quietTimeout = setTimeout(() => {
+        cleanup();
+      }, quietWindowMs);
+    };
+    const disposable = vscode.languages.onDidChangeDiagnostics((event) => {
+      for (const uri of event.uris) {
+        const fsPath = uri.fsPath;
+        if (!fsPath) {
+          continue;
+        }
+        const normalized = path.resolve(fsPath);
+        if (normalized === moduleRoot || normalized.startsWith(modulePrefix)) {
+          bumpQuietTimer();
+          break;
+        }
+      }
+    });
+    this.disposables.push(disposable);
+    bumpQuietTimer();
+    maxTimeout = setTimeout(() => {
+      cleanup();
+    }, maxWaitMs);
+    return promise;
   }
 }
