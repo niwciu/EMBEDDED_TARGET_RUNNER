@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
 import { createTargetTask } from '../tasks/taskFactory';
@@ -6,7 +7,7 @@ import { clearRegisteredTaskTerminals } from '../tasks/taskRegistry';
 export interface RunUpdate {
   moduleId: string;
   target: string;
-  status: 'running' | 'success' | 'failed';
+  status: 'running' | 'success' | 'warning' | 'failed';
   exitCode?: number;
 }
 
@@ -21,6 +22,7 @@ export class TargetRunner implements vscode.Disposable {
   private readonly pending: RunRequest[] = [];
   private readonly running = new Map<string, vscode.TaskExecution>();
   private readonly taskNames = new Map<string, string>();
+  private readonly modulePaths = new Map<string, string>();
   private readonly updates = new vscode.EventEmitter<RunUpdate>();
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -92,20 +94,34 @@ export class TargetRunner implements vscode.Disposable {
     const key = this.getKey(request.module.id, request.target);
     const task = createTargetTask(request.module, request.target, request.useNinja, request.makeJobs);
     this.updates.fire({ moduleId: request.module.id, target: request.target, status: 'running' });
+    this.modulePaths.set(key, request.module.path);
 
     const execution = await vscode.tasks.executeTask(task);
     this.running.set(key, execution);
   }
 
-  private handleTaskEnd(event: vscode.TaskProcessEndEvent): void {
+  private async handleTaskEnd(event: vscode.TaskProcessEndEvent): Promise<void> {
     const definition = event.execution.task.definition as { type?: string; moduleId?: string; target?: string };
     if (definition?.type !== 'targetsManager' || !definition.moduleId || !definition.target) {
       return;
     }
     const key = this.getKey(definition.moduleId, definition.target);
     this.running.delete(key);
-    const status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
+    let status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
+    if (status === 'success') {
+      const modulePath = this.modulePaths.get(key);
+      if (modulePath) {
+        await this.waitForDiagnostics(modulePath, 750);
+        const current = this.getDiagnosticsCounts(modulePath);
+        if (current.errors > 0) {
+          status = 'failed';
+        } else if (current.warnings > 0) {
+          status = 'warning';
+        }
+      }
+    }
     this.updates.fire({ moduleId: definition.moduleId, target: definition.target, status, exitCode: event.exitCode });
+    this.modulePaths.delete(key);
     this.kick();
   }
 
@@ -115,5 +131,56 @@ export class TargetRunner implements vscode.Disposable {
 
   private getTaskName(moduleName: string, target: string): string {
     return `${moduleName}:${target}`;
+  }
+
+  private getDiagnosticsCounts(modulePath: string): { warnings: number; errors: number } {
+    const moduleRoot = path.resolve(modulePath);
+    const modulePrefix = moduleRoot.endsWith(path.sep) ? moduleRoot : moduleRoot + path.sep;
+    let warnings = 0;
+    let errors = 0;
+    for (const [uri, diagnostics] of vscode.languages.getDiagnostics()) {
+      const fsPath = uri.fsPath;
+      if (!fsPath) {
+        continue;
+      }
+      const normalized = path.resolve(fsPath);
+      if (normalized !== moduleRoot && !normalized.startsWith(modulePrefix)) {
+        continue;
+      }
+      for (const diagnostic of diagnostics) {
+        if (diagnostic.severity === vscode.DiagnosticSeverity.Warning) {
+          warnings += 1;
+        } else if (diagnostic.severity === vscode.DiagnosticSeverity.Error) {
+          errors += 1;
+        }
+      }
+    }
+    return { warnings, errors };
+  }
+
+  private waitForDiagnostics(modulePath: string, timeoutMs: number): Promise<void> {
+    const moduleRoot = path.resolve(modulePath);
+    const modulePrefix = moduleRoot.endsWith(path.sep) ? moduleRoot : moduleRoot + path.sep;
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        disposable.dispose();
+        resolve();
+      }, timeoutMs);
+      const disposable = vscode.languages.onDidChangeDiagnostics((event) => {
+        const touched = event.uris.some((uri) => {
+          const fsPath = uri.fsPath;
+          if (!fsPath) {
+            return false;
+          }
+          const normalized = path.resolve(fsPath);
+          return normalized === moduleRoot || normalized.startsWith(modulePrefix);
+        });
+        if (touched) {
+          clearTimeout(timeout);
+          disposable.dispose();
+          resolve();
+        }
+      });
+    });
   }
 }

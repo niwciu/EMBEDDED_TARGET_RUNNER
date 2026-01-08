@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { CMakeGenerator } from '../cmake/generator';
 
-export type TargetRunStatus = 'idle' | 'running' | 'success' | 'failed';
+export type TargetRunStatus = 'idle' | 'running' | 'success' | 'warning' | 'failed';
 export type ConfigureStatus = 'idle' | 'running' | 'success' | 'failed';
 
 export interface ModuleInfo {
