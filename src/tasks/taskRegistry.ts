@@ -6,13 +6,24 @@ export function registerTaskName(name: string): void {
   registeredTaskNames.add(name);
 }
 
-export function clearRegisteredTaskTerminals(): void {
+export async function clearRegisteredTaskTerminals(options?: { closeAllTerminals?: boolean }): Promise<void> {
   if (registeredTaskNames.size === 0) {
     return;
   }
-  for (const terminal of vscode.window.terminals) {
-    if (registeredTaskNames.has(terminal.name)) {
-      terminal.dispose();
+  if (options?.closeAllTerminals) {
+    await vscode.commands.executeCommand('workbench.action.terminal.closeAll');
+    registeredTaskNames.clear();
+    return;
+  }
+  const terminals = vscode.window.terminals;
+  const hasNonRegistered = terminals.some((terminal) => !registeredTaskNames.has(terminal.name));
+  if (!hasNonRegistered) {
+    await vscode.commands.executeCommand('workbench.action.terminal.closeAll');
+  } else {
+    for (const terminal of terminals) {
+      if (registeredTaskNames.has(terminal.name)) {
+        terminal.dispose();
+      }
     }
   }
   registeredTaskNames.clear();

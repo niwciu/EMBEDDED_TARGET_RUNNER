@@ -113,6 +113,11 @@
             "default": 4,
             "minimum": 1,
             "description": "Maximum number of targets to run in parallel."
+          },
+          "targetsManager.clearTasksCloseAllTerminals": {
+            "type": "boolean",
+            "default": false,
+            "description": "Close all terminals when clearing tasks (including non-target terminals)."
           }
         }
       },

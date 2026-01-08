@@ -72,8 +72,8 @@ export class TargetRunner implements vscode.Disposable {
     this.pending.length = 0;
   }
 
-  clearAllTerminals(): void {
-    clearRegisteredTaskTerminals();
+  async clearAllTerminals(options?: { closeAllTerminals?: boolean }): Promise<void> {
+    await clearRegisteredTaskTerminals(options);
     this.taskNames.clear();
   }
 
