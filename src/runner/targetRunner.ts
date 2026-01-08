@@ -23,6 +23,10 @@ export class TargetRunner implements vscode.Disposable {
   private readonly running = new Map<string, vscode.TaskExecution>();
   private readonly taskNames = new Map<string, string>();
   private readonly modulePaths = new Map<string, string>();
+  private readonly runDiagnostics = new Map<
+    string,
+    { warnings: boolean; errors: boolean; modulePath: string; disposable: vscode.Disposable }
+  >();
   private readonly updates = new vscode.EventEmitter<RunUpdate>();
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -95,6 +99,7 @@ export class TargetRunner implements vscode.Disposable {
     const task = createTargetTask(request.module, request.target, request.useNinja, request.makeJobs);
     this.updates.fire({ moduleId: request.module.id, target: request.target, status: 'running' });
     this.modulePaths.set(key, request.module.path);
+    this.runDiagnostics.set(key, this.createDiagnosticsTracker(request.module.path));
 
     const execution = await vscode.tasks.executeTask(task);
     this.running.set(key, execution);
@@ -110,17 +115,19 @@ export class TargetRunner implements vscode.Disposable {
     let status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
     if (status === 'success') {
       const modulePath = this.modulePaths.get(key);
-      if (modulePath) {
+      const tracker = this.runDiagnostics.get(key);
+      if (modulePath && tracker) {
         await this.waitForDiagnostics(modulePath, 750);
-        const current = this.getDiagnosticsCounts(modulePath);
-        if (current.errors > 0) {
+        if (tracker.errors) {
           status = 'failed';
-        } else if (current.warnings > 0) {
+        } else if (tracker.warnings) {
           status = 'warning';
         }
       }
     }
     this.updates.fire({ moduleId: definition.moduleId, target: definition.target, status, exitCode: event.exitCode });
+    this.runDiagnostics.get(key)?.disposable.dispose();
+    this.runDiagnostics.delete(key);
     this.modulePaths.delete(key);
     this.kick();
   }
@@ -131,31 +138,6 @@ export class TargetRunner implements vscode.Disposable {
 
   private getTaskName(moduleName: string, target: string): string {
     return `${moduleName}:${target}`;
-  }
-
-  private getDiagnosticsCounts(modulePath: string): { warnings: number; errors: number } {
-    const moduleRoot = path.resolve(modulePath);
-    const modulePrefix = moduleRoot.endsWith(path.sep) ? moduleRoot : moduleRoot + path.sep;
-    let warnings = 0;
-    let errors = 0;
-    for (const [uri, diagnostics] of vscode.languages.getDiagnostics()) {
-      const fsPath = uri.fsPath;
-      if (!fsPath) {
-        continue;
-      }
-      const normalized = path.resolve(fsPath);
-      if (normalized !== moduleRoot && !normalized.startsWith(modulePrefix)) {
-        continue;
-      }
-      for (const diagnostic of diagnostics) {
-        if (diagnostic.severity === vscode.DiagnosticSeverity.Warning) {
-          warnings += 1;
-        } else if (diagnostic.severity === vscode.DiagnosticSeverity.Error) {
-          errors += 1;
-        }
-      }
-    }
-    return { warnings, errors };
   }
 
   private waitForDiagnostics(modulePath: string, timeoutMs: number): Promise<void> {
@@ -182,5 +164,44 @@ export class TargetRunner implements vscode.Disposable {
         }
       });
     });
+  }
+
+  private createDiagnosticsTracker(modulePath: string): {
+    warnings: boolean;
+    errors: boolean;
+    modulePath: string;
+    disposable: vscode.Disposable;
+  } {
+    const moduleRoot = path.resolve(modulePath);
+    const modulePrefix = moduleRoot.endsWith(path.sep) ? moduleRoot : moduleRoot + path.sep;
+    const tracker = {
+      warnings: false,
+      errors: false,
+      modulePath,
+      disposable: vscode.languages.onDidChangeDiagnostics((event) => {
+        const relevant = event.uris.filter((uri) => {
+          const fsPath = uri.fsPath;
+          if (!fsPath) {
+            return false;
+          }
+          const normalized = path.resolve(fsPath);
+          return normalized === moduleRoot || normalized.startsWith(modulePrefix);
+        });
+        if (relevant.length === 0) {
+          return;
+        }
+        for (const uri of relevant) {
+          const diagnostics = vscode.languages.getDiagnostics(uri);
+          for (const diagnostic of diagnostics) {
+            if (diagnostic.severity === vscode.DiagnosticSeverity.Error) {
+              tracker.errors = true;
+            } else if (diagnostic.severity === vscode.DiagnosticSeverity.Warning) {
+              tracker.warnings = true;
+            }
+          }
+        }
+      }),
+    };
+    return tracker;
   }
 }
