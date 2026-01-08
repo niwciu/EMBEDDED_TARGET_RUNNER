@@ -87,11 +87,12 @@ export class DashboardViewProvider implements vscode.Disposable {
     td.actions { text-align: left; }
     .cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
     .run { opacity: 1; font-size: 14px; cursor: pointer; }
-    .status { font-weight: 600; cursor: pointer; font-size: 14px; }
-    .configure-status { font-weight: 600; cursor: pointer; font-size: 14px; }
+    .status { font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; width: 1.4em; }
+    .configure-status { font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; width: 1.4em; }
     .status.idle { color: var(--vscode-descriptionForeground); }
     .status.running { color: var(--vscode-terminal-ansiYellow); }
     .status.success { color: var(--vscode-terminal-ansiGreen); }
+    .status.warning { color: var(--vscode-terminal-ansiYellow); }
     .status.failed { color: var(--vscode-terminal-ansiRed); }
     .status.missing { color: var(--vscode-disabledForeground); }
     .configure-status.idle { color: var(--vscode-descriptionForeground); }
@@ -146,7 +147,7 @@ export class DashboardViewProvider implements vscode.Disposable {
       const rows = state.modules.map((moduleState) => {
         const configureLabel = moduleState.needsConfigure ? 'Configure module (create out/)' : 'Reconfigure module (delete out/ then configure)';
         const configureAction = moduleState.needsConfigure ? 'configure' : 'reconfigure';
-        const configureIcon = moduleState.needsConfigure ? '🛠️' : '♻️';
+        const configureIcon = '🛠️';
         const configureStatus = moduleState.configure?.status || 'idle';
         const configureStatusIcon = configureStatus === 'running' ? '⏳' : configureStatus === 'success' ? '✓' : configureStatus === 'failed' ? '✗' : '•';
         const runDisabled = moduleState.needsConfigure ? 'disabled' : '';
@@ -172,7 +173,16 @@ export class DashboardViewProvider implements vscode.Disposable {
             return '<td><div class=\"cell\"><span class=\"status missing\">-</span></div></td>';
           }
           const statusClass = run.status;
-          const icon = run.status === 'running' ? '⏳' : run.status === 'success' ? '✓' : run.status === 'failed' ? '✗' : '•';
+          const icon =
+            run.status === 'running'
+              ? '⏳'
+              : run.status === 'success'
+                ? '✓'
+                : run.status === 'warning'
+                  ? '⚠️'
+                  : run.status === 'failed'
+                    ? '✗'
+                    : '•';
           return [
             '<td data-module=\"' + moduleState.module.id + '\" data-target=\"' + target.name + '\">',
             '<div class=\"cell\">',
