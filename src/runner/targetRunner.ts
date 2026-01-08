@@ -187,6 +187,7 @@ export class TargetRunner implements vscode.Disposable {
     const promise = new Promise<void>((resolve) => {
       resolvePromise = resolve;
     });
+    let disposableIndex = -1;
     const cleanup = () => {
       if (quietTimeout) {
         clearTimeout(quietTimeout);
@@ -196,6 +197,10 @@ export class TargetRunner implements vscode.Disposable {
       }
       if (initialTimeout) {
         clearTimeout(initialTimeout);
+      }
+      if (disposableIndex !== -1) {
+        this.disposables.splice(disposableIndex, 1);
+        disposableIndex = -1;
       }
       disposable.dispose();
       resolvePromise();
@@ -225,6 +230,7 @@ export class TargetRunner implements vscode.Disposable {
       }
     });
     this.disposables.push(disposable);
+    disposableIndex = this.disposables.length - 1;
     initialTimeout = setTimeout(() => {
       if (!sawChange) {
         cleanup();

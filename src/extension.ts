@@ -38,9 +38,25 @@ const getDashboards = (): DashboardDefinition[] => {
 
 const getBuildSettings = (): Pick<SettingsState, 'buildSystem' | 'makeJobs' | 'maxParallel'> => {
   const config = vscode.workspace.getConfiguration('targetsManager');
+  const normalizeMakeJobs = (value: string | number): string | number => {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.toLowerCase() === 'auto') {
+        return 'auto';
+      }
+      const parsed = Number(trimmed);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    return 'auto';
+  };
   return {
     buildSystem: config.get<string>('buildSystem', 'auto'),
-    makeJobs: config.get<string | number>('makeJobs', 'auto'),
+    makeJobs: normalizeMakeJobs(config.get<string | number>('makeJobs', 'auto')),
     maxParallel: config.get<number>('maxParallel', 4),
   };
 };

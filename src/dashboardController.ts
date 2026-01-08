@@ -336,8 +336,9 @@ export class DashboardController implements vscode.Disposable {
           this.configureTaskNames.set(moduleInfo.id, taskName);
           const exitCode = await this.runConfigureTask(moduleInfo, generator);
           configureOutput = `See terminal: ${taskName}`;
-          if (exitCode && exitCode !== 0) {
-            throw new Error(`Configure failed with exit code ${exitCode}.`);
+          if (exitCode !== 0) {
+            const codeLabel = exitCode === undefined ? 'unknown' : String(exitCode);
+            throw new Error(`Configure failed with exit code ${codeLabel}.`);
           }
         } else {
           const configureResult = await ensureConfigured(moduleInfo.path, settings.buildSystem);
@@ -523,9 +524,25 @@ export class DashboardController implements vscode.Disposable {
 
   private getRunnerSettings(): RunnerSettings {
     const config = vscode.workspace.getConfiguration('targetsManager');
+    const normalizeMakeJobs = (value: string | number): string | number => {
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.toLowerCase() === 'auto') {
+          return 'auto';
+        }
+        const parsed = Number(trimmed);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          return parsed;
+        }
+      }
+      return 'auto';
+    };
     return {
       buildSystem: config.get<BuildSystem>('buildSystem', 'auto'),
-      makeJobs: config.get<string | number>('makeJobs', 'auto'),
+      makeJobs: normalizeMakeJobs(config.get<string | number>('makeJobs', 'auto')),
       maxParallel: config.get<number>('maxParallel', 4),
     };
   }

@@ -40,7 +40,7 @@ export async function discoverModules(
     const modulePath = path.join(rootPath, entry.name);
     if (await isModuleDirectory(modulePath)) {
       modules.push({
-        id: `${workspaceFolder.uri.fsPath}:${entry.name}`,
+        id: `${workspaceFolder.uri.fsPath}:${modulesRoot}:${entry.name}`,
         name: entry.name,
         path: modulePath,
         workspaceFolder,
