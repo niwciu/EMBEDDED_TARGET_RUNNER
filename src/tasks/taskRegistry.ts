@@ -1,9 +1,20 @@
 import * as vscode from 'vscode';
 
 const registeredTaskNames = new Set<string>();
+const taskWarnings = new Map<string, boolean>();
 
 export function registerTaskName(name: string): void {
   registeredTaskNames.add(name);
+}
+
+export function setTaskWarnings(taskKey: string, warningsDetected: boolean): void {
+  taskWarnings.set(taskKey, warningsDetected);
+}
+
+export function consumeTaskWarnings(taskKey: string): boolean | undefined {
+  const warningsDetected = taskWarnings.get(taskKey);
+  taskWarnings.delete(taskKey);
+  return warningsDetected;
 }
 
 export async function clearRegisteredTaskTerminals(options?: { closeAllTerminals?: boolean }): Promise<void> {

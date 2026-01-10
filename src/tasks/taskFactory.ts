@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
 import { registerTaskName } from './taskRegistry';
+import { SpawnTaskTerminal } from './spawnTaskTerminal';
 
 export interface TargetTaskDefinition extends vscode.TaskDefinition {
   type: 'targetsManager';
@@ -31,7 +32,8 @@ export function createTargetTask(
   }
   args.push(target);
 
-  const execution = new vscode.ShellExecution(command, args, { cwd });
+  const taskKey = `${moduleInfo.id}:${target}`;
+  const execution = new vscode.CustomExecution(async () => new SpawnTaskTerminal(command, args, cwd, taskKey));
 
   const definition: TargetTaskDefinition = {
     type: 'targetsManager',

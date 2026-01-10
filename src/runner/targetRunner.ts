@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ModuleInfo } from '../state/types';
 import { createTargetTask } from '../tasks/taskFactory';
-import { clearRegisteredTaskTerminals } from '../tasks/taskRegistry';
+import { clearRegisteredTaskTerminals, consumeTaskWarnings } from '../tasks/taskRegistry';
 
 export interface RunUpdate {
   moduleId: string;
@@ -107,8 +107,16 @@ export class TargetRunner implements vscode.Disposable {
     const modulePath = this.modulePaths.get(key);
     const startedAt = this.runStartedAt.get(key) ?? Date.now();
     let status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
+    const warningsDetected = consumeTaskWarnings(key);
     if (status === 'success' && modulePath) {
-      status = await this.resolveDiagnosticsStatus(modulePath, startedAt);
+      const diagnosticsStatus = await this.resolveDiagnosticsStatus(modulePath, startedAt);
+      if (diagnosticsStatus === 'failed') {
+        status = 'failed';
+      } else if (diagnosticsStatus === 'warning' || warningsDetected) {
+        status = 'warning';
+      }
+    } else if (status === 'success' && warningsDetected) {
+      status = 'warning';
     }
     if (status === 'success' && this.autoCloseOnSuccess.get(key)) {
       this.closeTaskTerminal(key);
