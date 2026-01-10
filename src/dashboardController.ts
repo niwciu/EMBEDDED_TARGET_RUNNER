@@ -49,6 +49,8 @@ export class DashboardController implements vscode.Disposable {
   private readonly configureResolvers = new Map<string, (exitCode?: number) => void>();
   private readonly runAllQueues = new Map<string, string[]>();
   private readonly runAllActive = new Map<string, string>();
+  private readonly runModuleQueues = new Map<string, string[]>();
+  private readonly runModuleActive = new Map<string, string>();
 
   constructor(private readonly context: vscode.ExtensionContext, options: DashboardControllerOptions) {
     this.options = options;
@@ -76,6 +78,7 @@ export class DashboardController implements vscode.Disposable {
             finishedAt: Date.now(),
           });
           this.handleRunAllCompletion(update.moduleId, update.target);
+          this.handleRunModuleCompletion(update.moduleId, update.target);
         }
         this.pushState();
       }),
@@ -183,6 +186,8 @@ export class DashboardController implements vscode.Disposable {
     this.runner.stopAll();
     this.runAllQueues.clear();
     this.runAllActive.clear();
+    this.runModuleQueues.clear();
+    this.runModuleActive.clear();
   }
 
   async clearAllTasks(): Promise<void> {
@@ -194,6 +199,8 @@ export class DashboardController implements vscode.Disposable {
     this.configureTaskNames.clear();
     this.runAllQueues.clear();
     this.runAllActive.clear();
+    this.runModuleQueues.clear();
+    this.runModuleActive.clear();
   }
 
   runTargetForModule(moduleId: string): void {
@@ -201,12 +208,15 @@ export class DashboardController implements vscode.Disposable {
     if (!moduleState) {
       return;
     }
-    const settings = this.getRunnerSettings();
-    for (const target of this.stateStore.getState().targets) {
-      if (moduleState.availability[target.name]) {
-        this.enqueueRun(moduleState.module, target.name, settings, true);
-      }
+    const targets = this.stateStore.getState().targets.map((target) => target.name);
+    const availableTargets = targets.filter((target) => moduleState.availability[target]);
+    if (availableTargets.length === 0) {
+      return;
     }
+    const activeTarget = this.runModuleActive.get(moduleId);
+    const queue = activeTarget ? availableTargets.filter((target) => target !== activeTarget) : availableTargets;
+    this.runModuleQueues.set(moduleId, queue);
+    this.startNextRunModuleTarget(moduleId);
   }
 
   runTargetForAllModules(target: string): void {
@@ -497,6 +507,43 @@ export class DashboardController implements vscode.Disposable {
     }
     this.runAllActive.delete(moduleId);
     this.startNextRunAllTarget(moduleId);
+  }
+
+  private startNextRunModuleTarget(moduleId: string): void {
+    if (this.runModuleActive.has(moduleId)) {
+      return;
+    }
+    const queue = this.runModuleQueues.get(moduleId);
+    if (!queue) {
+      return;
+    }
+    const moduleState = this.stateStore.getModuleState(moduleId);
+    if (!moduleState) {
+      this.runModuleQueues.delete(moduleId);
+      return;
+    }
+    while (queue.length > 0) {
+      const nextTarget = queue.shift();
+      if (!nextTarget) {
+        continue;
+      }
+      if (!moduleState.availability[nextTarget]) {
+        continue;
+      }
+      this.runModuleActive.set(moduleId, nextTarget);
+      this.enqueueRun(moduleState.module, nextTarget, this.getRunnerSettings(), true);
+      return;
+    }
+    this.runModuleQueues.delete(moduleId);
+  }
+
+  private handleRunModuleCompletion(moduleId: string, target: string): void {
+    const activeTarget = this.runModuleActive.get(moduleId);
+    if (activeTarget !== target) {
+      return;
+    }
+    this.runModuleActive.delete(moduleId);
+    this.startNextRunModuleTarget(moduleId);
   }
 
   private revealConfigureOutput(moduleId: string): void {
