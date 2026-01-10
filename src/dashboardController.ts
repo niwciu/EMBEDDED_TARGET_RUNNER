@@ -204,7 +204,7 @@ export class DashboardController implements vscode.Disposable {
     const settings = this.getRunnerSettings();
     for (const target of this.stateStore.getState().targets) {
       if (moduleState.availability[target.name]) {
-        this.enqueueRun(moduleState.module, target.name, settings);
+        this.enqueueRun(moduleState.module, target.name, settings, true);
       }
     }
   }
@@ -213,7 +213,7 @@ export class DashboardController implements vscode.Disposable {
     const settings = this.getRunnerSettings();
     for (const moduleState of this.stateStore.getState().modules) {
       if (moduleState.availability[target]) {
-        this.enqueueRun(moduleState.module, target, settings);
+        this.enqueueRun(moduleState.module, target, settings, true);
       }
     }
   }
@@ -273,7 +273,7 @@ export class DashboardController implements vscode.Disposable {
     }
   }
 
-  private enqueueRun(module: ModuleInfo, target: string, settings: RunnerSettings): void {
+  private enqueueRun(module: ModuleInfo, target: string, settings: RunnerSettings, autoCloseOnSuccess = false): void {
     const moduleState = this.stateStore.getModuleState(module.id);
     if (!moduleState || !moduleState.availability[target]) {
       return;
@@ -286,6 +286,7 @@ export class DashboardController implements vscode.Disposable {
       target,
       useNinja,
       makeJobs,
+      autoCloseOnSuccess,
     });
   }
 
@@ -328,7 +329,7 @@ export class DashboardController implements vscode.Disposable {
         void this.configureAllModules();
         break;
       case 'reveal':
-        this.runner.reveal(message.moduleId, message.target);
+        this.revealOrRerunTarget(message.moduleId, message.target);
         break;
       default:
         break;
@@ -483,7 +484,7 @@ export class DashboardController implements vscode.Disposable {
         continue;
       }
       this.runAllActive.set(moduleId, nextTarget);
-      this.enqueueRun(moduleState.module, nextTarget, this.getRunnerSettings());
+      this.enqueueRun(moduleState.module, nextTarget, this.getRunnerSettings(), true);
       return;
     }
     this.runAllQueues.delete(moduleId);
@@ -512,6 +513,20 @@ export class DashboardController implements vscode.Disposable {
     vscode.window.showInformationMessage(
       moduleState.configure?.output ?? 'No configure terminal found for this module yet.',
     );
+  }
+
+  private revealOrRerunTarget(moduleId: string, target: string): void {
+    const moduleState = this.stateStore.getState().modules.find((state) => state.module.id === moduleId);
+    if (!moduleState) {
+      return;
+    }
+    const taskName = `${moduleState.module.name}:${target}`;
+    const terminal = vscode.window.terminals.find((item) => item.name === taskName);
+    if (terminal) {
+      terminal.show(true);
+      return;
+    }
+    this.enqueueRun(moduleState.module, target, this.getRunnerSettings(), false);
   }
 
   private async runConfigureTask(moduleInfo: ModuleInfo, generator: string): Promise<number | undefined> {
