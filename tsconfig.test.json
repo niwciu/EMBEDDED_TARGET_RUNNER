@@ -4,5 +4,6 @@
     "types": ["node", "mocha"],
     "outDir": "out"
   },
-  "include": ["src/test/**/*.ts"]
+  "include": ["src/test/**/*.ts"],
+  "exclude": ["node_modules", ".vscode-test"]
 }
