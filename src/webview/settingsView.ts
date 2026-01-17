@@ -16,11 +16,8 @@ export type SettingsState = {
 
 type SettingsMessage =
   | { type: 'ready' }
-  | {
-      type: 'updateBuildSettings';
-      payload: Pick<SettingsState, 'buildSystem' | 'makeJobs' | 'maxParallel'> & { scope: 'user' | 'workspace' };
-    }
-  | { type: 'updateDashboards'; payload: { dashboards: DashboardSettings[]; scope: 'user' | 'workspace' } };
+  | { type: 'updateBuildSettings'; payload: Pick<SettingsState, 'buildSystem' | 'makeJobs' | 'maxParallel'> }
+  | { type: 'updateDashboards'; payload: DashboardSettings[] };
 
 export class SettingsViewProvider implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
@@ -99,13 +96,6 @@ export class SettingsViewProvider implements vscode.Disposable {
   <div class="panel">
     <div class="grid">
       <div>
-        <label for="buildScope">Save build settings to</label>
-        <select id="buildScope">
-          <option value="workspace">Workspace</option>
-          <option value="user">User</option>
-        </select>
-      </div>
-      <div>
         <label for="buildSystem">Build system</label>
         <select id="buildSystem">
           <option value="auto">Auto</option>
@@ -132,11 +122,6 @@ export class SettingsViewProvider implements vscode.Disposable {
     <div class="panel">
       <label>Dashboards</label>
       <div id="dashboardList" class="list"></div>
-      <label for="dashboardScope">Save dashboards to</label>
-      <select id="dashboardScope">
-        <option value="workspace">Workspace</option>
-        <option value="user">User</option>
-      </select>
       <div class="buttons">
         <button id="addDashboard">Add dashboard</button>
         <button id="removeDashboard" class="danger">Remove</button>
@@ -169,13 +154,11 @@ export class SettingsViewProvider implements vscode.Disposable {
     const makeJobs = document.getElementById('makeJobs');
     const maxParallel = document.getElementById('maxParallel');
     const saveBuild = document.getElementById('saveBuild');
-    const buildScope = document.getElementById('buildScope');
 
     const dashboardList = document.getElementById('dashboardList');
     const addDashboard = document.getElementById('addDashboard');
     const removeDashboard = document.getElementById('removeDashboard');
     const saveDashboard = document.getElementById('saveDashboard');
-    const dashboardScope = document.getElementById('dashboardScope');
 
     const dashboardName = document.getElementById('dashboardName');
     const moduleRoot1 = document.getElementById('moduleRoot1');
@@ -246,7 +229,6 @@ export class SettingsViewProvider implements vscode.Disposable {
           buildSystem: buildSystem.value,
           makeJobs: makeJobsValue,
           maxParallel: Number(maxParallel.value) || 1,
-          scope: buildScope.value === 'user' ? 'user' : 'workspace',
         },
       });
     });
@@ -266,10 +248,7 @@ export class SettingsViewProvider implements vscode.Disposable {
       state.selectedIndex = Math.max(state.selectedIndex - 1, 0);
       renderDashboards();
       fillDashboardForm();
-      vscode.postMessage({
-        type: 'updateDashboards',
-        payload: { dashboards: state.dashboards, scope: dashboardScope.value === 'user' ? 'user' : 'workspace' },
-      });
+      vscode.postMessage({ type: 'updateDashboards', payload: state.dashboards });
     });
 
     saveDashboard.addEventListener('click', () => {
@@ -282,10 +261,7 @@ export class SettingsViewProvider implements vscode.Disposable {
       };
       state.dashboards[state.selectedIndex] = dashboard;
       renderDashboards();
-      vscode.postMessage({
-        type: 'updateDashboards',
-        payload: { dashboards: state.dashboards, scope: dashboardScope.value === 'user' ? 'user' : 'workspace' },
-      });
+      vscode.postMessage({ type: 'updateDashboards', payload: state.dashboards });
     });
 
     window.addEventListener('message', (event) => {

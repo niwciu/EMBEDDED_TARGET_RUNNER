@@ -75,17 +75,13 @@ export function activate(context: vscode.ExtensionContext): void {
         settingsViewProvider.refresh();
       }
       if (message.type === 'updateBuildSettings') {
-        const target =
-          message.payload.scope === 'user' ? vscode.ConfigurationTarget.Global : vscode.ConfigurationTarget.Workspace;
-        await config.update('buildSystem', message.payload.buildSystem, target);
-        await config.update('makeJobs', message.payload.makeJobs, target);
-        await config.update('maxParallel', message.payload.maxParallel, target);
+        await config.update('buildSystem', message.payload.buildSystem, vscode.ConfigurationTarget.Workspace);
+        await config.update('makeJobs', message.payload.makeJobs, vscode.ConfigurationTarget.Workspace);
+        await config.update('maxParallel', message.payload.maxParallel, vscode.ConfigurationTarget.Workspace);
         settingsViewProvider.refresh();
       }
       if (message.type === 'updateDashboards') {
-        const target =
-          message.payload.scope === 'user' ? vscode.ConfigurationTarget.Global : vscode.ConfigurationTarget.Workspace;
-        await config.update('dashboards', message.payload.dashboards, target);
+        await config.update('dashboards', message.payload, vscode.ConfigurationTarget.Workspace);
         settingsViewProvider.refresh();
       }
     },
