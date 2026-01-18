@@ -130,11 +130,8 @@ export class SettingsViewProvider implements vscode.Disposable {
     <div class="panel">
       <label for="dashboardName">Name</label>
       <input id="dashboardName" />
-      <label>Module roots (up to 2)</label>
-      <div class="grid">
-        <input id="moduleRoot1" placeholder="e.g. test" />
-        <input id="moduleRoot2" placeholder="optional second root" />
-      </div>
+      <label for="moduleRoots">Module roots (comma or newline separated)</label>
+      <textarea id="moduleRoots" placeholder="e.g. test&#10;or: test, integration"></textarea>
       <label for="excludedModules">Excluded modules (comma-separated)</label>
       <textarea id="excludedModules"></textarea>
       <label for="targets">Targets (comma-separated)</label>
@@ -161,14 +158,20 @@ export class SettingsViewProvider implements vscode.Disposable {
     const saveDashboard = document.getElementById('saveDashboard');
 
     const dashboardName = document.getElementById('dashboardName');
-    const moduleRoot1 = document.getElementById('moduleRoot1');
-    const moduleRoot2 = document.getElementById('moduleRoot2');
+    const moduleRootsInput = document.getElementById('moduleRoots');
     const excludedModules = document.getElementById('excludedModules');
     const targets = document.getElementById('targets');
 
     const toList = (value) =>
       value
         .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    const toMultilineList = (value) =>
+      value
+        .split('\n')
+        .flatMap((line) => line.split(','))
         .map((item) => item.trim())
         .filter(Boolean);
 
@@ -194,15 +197,13 @@ export class SettingsViewProvider implements vscode.Disposable {
       const dashboard = state.dashboards[state.selectedIndex];
       if (!dashboard) {
         dashboardName.value = '';
-        moduleRoot1.value = '';
-        moduleRoot2.value = '';
+        moduleRootsInput.value = '';
         excludedModules.value = '';
         targets.value = '';
         return;
       }
       dashboardName.value = dashboard.name ?? '';
-      moduleRoot1.value = dashboard.moduleRoots?.[0] ?? '';
-      moduleRoot2.value = dashboard.moduleRoots?.[1] ?? '';
+      moduleRootsInput.value = (dashboard.moduleRoots || []).join('\n');
       excludedModules.value = (dashboard.excludedModules || []).join(', ');
       targets.value = (dashboard.targets || []).join(', ');
     };
@@ -253,7 +254,7 @@ export class SettingsViewProvider implements vscode.Disposable {
     });
 
     saveDashboard.addEventListener('click', () => {
-      const moduleRoots = [moduleRoot1.value.trim(), moduleRoot2.value.trim()].filter(Boolean).slice(0, 2);
+      const moduleRoots = toMultilineList(moduleRootsInput.value);
       if (!dashboardName.value.trim()) {
         alert('Dashboard name is required.');
         return;

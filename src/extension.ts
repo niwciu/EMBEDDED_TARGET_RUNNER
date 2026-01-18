@@ -16,12 +16,34 @@ const DEFAULT_DASHBOARDS: DashboardDefinition[] = [
   },
 ];
 
+const normalizeModuleRoots = (moduleRoots: DashboardDefinition['moduleRoots'] | string | undefined): string[] => {
+  if (typeof moduleRoots === 'string') {
+    return moduleRoots
+      .split(',')
+      .map((root) => root.trim())
+      .filter(Boolean);
+  }
+  if (Array.isArray(moduleRoots)) {
+    return moduleRoots
+      .flatMap((root) =>
+        typeof root === 'string'
+          ? root
+              .split(',')
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [],
+      )
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const normalizeDashboards = (dashboards: DashboardDefinition[]): DashboardDefinition[] =>
   dashboards
     .filter((dashboard) => typeof dashboard.name === 'string' && dashboard.name.trim().length > 0)
     .map((dashboard) => ({
       name: dashboard.name.trim(),
-      moduleRoots: Array.isArray(dashboard.moduleRoots) ? dashboard.moduleRoots.filter(Boolean).slice(0, 2) : [],
+      moduleRoots: normalizeModuleRoots(dashboard.moduleRoots),
       excludedModules: Array.isArray(dashboard.excludedModules)
         ? dashboard.excludedModules.filter(Boolean)
         : DEFAULT_DASHBOARDS[0].excludedModules,
