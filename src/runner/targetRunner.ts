@@ -30,13 +30,18 @@ export class TargetRunner implements vscode.Disposable {
   private readonly modulePaths = new Map<string, string>();
   private readonly runStartedAt = new Map<string, number>();
   private readonly autoCloseOnSuccess = new Map<string, boolean>();
+  private readonly taskOutput = new Map<string, string>();
   private readonly updates = new vscode.EventEmitter<RunUpdate>();
   private readonly disposables: vscode.Disposable[] = [];
+  private readonly maxOutputSize = 200_000;
 
   constructor(private maxParallel: number) {
     this.disposables.push(
       vscode.tasks.onDidEndTaskProcess((event) => {
         void this.handleTaskEnd(event);
+      }),
+      vscode.tasks.onDidWriteTaskData((event) => {
+        this.handleTaskOutput(event);
       }),
       this.updates,
     );
@@ -115,9 +120,13 @@ export class TargetRunner implements vscode.Disposable {
     this.running.delete(key);
     const modulePath = this.modulePaths.get(key);
     const startedAt = this.runStartedAt.get(key) ?? Date.now();
+    const output = this.taskOutput.get(key) ?? '';
     let status: RunUpdate['status'] = event.exitCode === 0 ? 'success' : 'failed';
     if (status === 'success' && modulePath) {
       status = await this.resolveDiagnosticsStatus(modulePath, startedAt);
+    }
+    if (status === 'success' && output) {
+      status = this.resolveOutputStatus(0, output);
     }
     if (status === 'success' && this.autoCloseOnSuccess.get(key)) {
       this.closeTaskTerminal(key);
@@ -131,6 +140,7 @@ export class TargetRunner implements vscode.Disposable {
     this.modulePaths.delete(key);
     this.runStartedAt.delete(key);
     this.autoCloseOnSuccess.delete(key);
+    this.taskOutput.delete(key);
     this.kick();
   }
 
@@ -140,6 +150,20 @@ export class TargetRunner implements vscode.Disposable {
 
   private getTaskName(moduleName: string, target: string): string {
     return `${moduleName}:${target}`;
+  }
+
+  private handleTaskOutput(event: vscode.TaskProcessDataEvent): void {
+    const definition = event.execution.task.definition as { type?: string; moduleId?: string; target?: string };
+    if (definition?.type !== 'targetsManager' || !definition.moduleId || !definition.target) {
+      return;
+    }
+    const key = this.getKey(definition.moduleId, definition.target);
+    const existing = this.taskOutput.get(key) ?? '';
+    let next = existing + event.data;
+    if (next.length > this.maxOutputSize) {
+      next = next.slice(next.length - this.maxOutputSize);
+    }
+    this.taskOutput.set(key, next);
   }
 
   private closeTaskTerminal(key: string): void {
