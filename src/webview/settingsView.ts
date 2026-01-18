@@ -238,6 +238,7 @@ export class SettingsViewProvider implements vscode.Disposable {
       state.selectedIndex = state.dashboards.length - 1;
       renderDashboards();
       fillDashboardForm();
+      vscode.postMessage({ type: 'updateDashboards', payload: state.dashboards });
     });
 
     removeDashboard.addEventListener('click', () => {
@@ -269,6 +270,7 @@ export class SettingsViewProvider implements vscode.Disposable {
       };
       state.dashboards[state.selectedIndex] = dashboard;
       renderDashboards();
+      fillDashboardForm();
       vscode.postMessage({ type: 'updateDashboards', payload: state.dashboards });
     });
 
