@@ -8,7 +8,7 @@ export function registerTaskName(name: string): void {
 
 export async function clearRegisteredTaskTerminals(options?: { closeAllTerminals?: boolean }): Promise<void> {
   if (options?.closeAllTerminals) {
-    await vscode.commands.executeCommand('workbench.action.terminal.closeAll');
+    await vscode.commands.executeCommand('workbench.action.terminal.killAll');
     registeredTaskNames.clear();
     return;
   }
