@@ -188,7 +188,7 @@ export class DashboardController implements vscode.Disposable {
   async clearAllTasks(): Promise<void> {
     terminateAllRunnerTasks();
     this.runner.stopAll();
-    await this.runner.clearAllTerminals({ closeAllTerminals: false });
+    await this.runner.clearAllTerminals({ closeAllTerminals: true });
     this.configureTaskNames.clear();
     this.runAllQueues.clear();
     this.runAllActive.clear();
