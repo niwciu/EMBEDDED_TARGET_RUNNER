@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
+const MAX_BUFFER = 10 * 1024 * 1024;
 
 export interface ExecResult {
   stdout: string;
@@ -15,7 +16,7 @@ export interface ExecResultWithExitCode extends ExecResult {
 export async function runCommand(command: string, args: string[], cwd: string): Promise<ExecResult> {
   const { stdout, stderr } = await execFileAsync(command, args, {
     cwd,
-    maxBuffer: 1024 * 1024,
+    maxBuffer: MAX_BUFFER,
     env: process.env,
   });
   return { stdout: stdout ?? '', stderr: stderr ?? '' };
@@ -29,7 +30,7 @@ export async function runCommandWithExitCode(
   try {
     const { stdout, stderr } = await execFileAsync(command, args, {
       cwd,
-      maxBuffer: 1024 * 1024,
+      maxBuffer: MAX_BUFFER,
       env: process.env,
     });
     return { stdout: stdout ?? '', stderr: stderr ?? '', exitCode: 0 };
@@ -47,7 +48,12 @@ export async function runCommandWithExitCode(
           : Buffer.isBuffer(error.stderr)
             ? error.stderr.toString()
             : '';
-      const exitCode = 'code' in error && typeof error.code === 'number' ? error.code : undefined;
+      const exitCode =
+        'code' in error && typeof error.code === 'number'
+          ? error.code
+          : 'code' in error && error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+            ? 0
+            : undefined;
       return { stdout, stderr, exitCode };
     }
     return { stdout: '', stderr: '', exitCode: undefined };
