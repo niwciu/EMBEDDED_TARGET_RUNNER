@@ -170,7 +170,7 @@ export class SettingsViewProvider implements vscode.Disposable {
 
     const toMultilineList = (value) =>
       value
-        .split('\n')
+        .split('\\n')
         .flatMap((line) => line.split(','))
         .map((item) => item.trim())
         .filter(Boolean);
@@ -203,7 +203,7 @@ export class SettingsViewProvider implements vscode.Disposable {
         return;
       }
       dashboardName.value = dashboard.name ?? '';
-      moduleRootsInput.value = (dashboard.moduleRoots || []).join('\n');
+      moduleRootsInput.value = (dashboard.moduleRoots || []).join('\\n');
       excludedModules.value = (dashboard.excludedModules || []).join(', ');
       targets.value = (dashboard.targets || []).join(', ');
     };
