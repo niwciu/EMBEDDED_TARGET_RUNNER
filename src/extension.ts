@@ -89,6 +89,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (message.type === 'updateDashboards') {
         await config.update('dashboards', message.payload, target);
         settingsViewProvider.refresh();
+        updateDashboardControllers();
       }
     },
   );

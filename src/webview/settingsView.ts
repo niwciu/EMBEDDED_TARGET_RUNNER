@@ -253,6 +253,14 @@ export class SettingsViewProvider implements vscode.Disposable {
 
     saveDashboard.addEventListener('click', () => {
       const moduleRoots = [moduleRoot1.value.trim(), moduleRoot2.value.trim()].filter(Boolean).slice(0, 2);
+      if (!dashboardName.value.trim()) {
+        alert('Dashboard name is required.');
+        return;
+      }
+      if (moduleRoots.length === 0) {
+        alert('At least one module root is required.');
+        return;
+      }
       const dashboard = {
         name: dashboardName.value.trim(),
         moduleRoots,
