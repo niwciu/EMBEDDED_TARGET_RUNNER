@@ -107,6 +107,7 @@ export class TargetRunner implements vscode.Disposable {
     this.updates.fire({ moduleId: request.module.id, target: request.target, status: 'running' });
     this.modulePaths.set(key, request.module.path);
     this.runStartedAt.set(key, Date.now());
+    this.taskOutput.set(key, '');
     if (request.runInTerminal === false) {
       this.running.set(key, { kind: 'silent' });
       await this.executeSilently(request, key);
@@ -185,6 +186,7 @@ export class TargetRunner implements vscode.Disposable {
   }
 
   private async executeInTerminal(request: RunRequest, key: string): Promise<void> {
+    this.taskOutput.set(key, '');
     const task = createTargetTask(request.module, request.target, request.useNinja, request.makeJobs);
     const execution = await vscode.tasks.executeTask(task);
     this.running.set(key, { kind: 'task', execution });
